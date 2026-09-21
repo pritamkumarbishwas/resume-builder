@@ -1,0 +1,312 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@import "highlight.js/styles/github-dark.css";
+
+@theme {
+  /* ── Base tokens (light mode default) ── */
+  --color-background: #ffffff;
+  --color-foreground: #171717;
+  --color-card: #f9fafb;
+  --color-card-foreground: #171717;
+  --color-primary: #10a37f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f3f4f6;
+  --color-secondary-foreground: #171717;
+  --color-muted: #f3f4f6;
+  --color-muted-foreground: #6b7280;
+  --color-accent: #f3f4f6;
+  --color-accent-foreground: #171717;
+  --color-destructive: #ef4444;
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #10a37f;
+  --color-sidebar: #f9fafb;
+  --color-sidebar-foreground: #171717;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #171717;
+
+  /* ── Semantic tokens (light) ── */
+  --color-primary-end: #0d8c6d;
+  --color-card-hover: #f1f5f9;
+  --color-border-focus: #a3a3a3;
+  --color-on-primary: #ffffff;
+  --color-primary-fg-hover: #f0f0f0;
+  --color-muted-hover: #e5e7eb;
+  --color-muted-hover-strong: #d1d5db;
+  --color-border-subtle: #e5e7eb;
+  --color-code-bg: #f6f8fa;
+  --color-code-header: #f0f0f0;
+  --color-badge-bg: #e5e7eb;
+  --color-table-header: #f9fafb;
+  --color-user: #6366f1;
+  --color-user-end: #8b5cf6;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+/* ── Dark mode overrides (Midnight Blue) ── */
+.dark {
+  --color-background: #0f1219;
+  --color-foreground: #e2e4e9;
+  --color-card: #161b26;
+  --color-card-foreground: #e2e4e9;
+  --color-primary: #10a37f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #161b26;
+  --color-secondary-foreground: #e2e4e9;
+  --color-muted: #161b26;
+  --color-muted-foreground: #7c8298;
+  --color-accent: #161b26;
+  --color-accent-foreground: #e2e4e9;
+  --color-destructive: #f04e4e;
+  --color-border: #252b3b;
+  --color-input: #252b3b;
+  --color-ring: #10a37f;
+  --color-sidebar: #0c0f16;
+  --color-sidebar-foreground: #e2e4e9;
+  --color-popover: #161b26;
+  --color-popover-foreground: #e2e4e9;
+
+  --color-primary-end: #0ea37a;
+  --color-card-hover: #1c2233;
+  --color-border-focus: #3d4560;
+  --color-on-primary: #ffffff;
+  --color-primary-fg-hover: #d4d7dc;
+  --color-muted-hover: #1c2233;
+  --color-muted-hover-strong: #252d40;
+  --color-border-subtle: #1e2433;
+  --color-code-bg: #0d1017;
+  --color-code-header: #131825;
+  --color-badge-bg: #1e2433;
+  --color-table-header: #131825;
+  --color-user: #6366f1;
+  --color-user-end: #8b5cf6;
+}
+
+body {
+  font-family: "Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* Animations & Utilities */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-muted-foreground);
+}
+
+/* ── Highlight.js — Light theme ── */
+.hljs {
+  color: #24292e;
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-type {
+  color: #d73a49;
+}
+
+.hljs-literal,
+.hljs-number,
+.hljs-tag .hljs-attr,
+.hljs-template-variable,
+.hljs-variable {
+  color: #005cc5;
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp {
+  color: #032f62;
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-section,
+.hljs-selector-id {
+  color: #6f42c1;
+  font-weight: 600;
+}
+
+.hljs-subst {
+  color: #24292e;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #e36209;
+}
+
+.hljs-link,
+.hljs-meta,
+.hljs-selector-class {
+  color: #005cc5;
+}
+
+.hljs-built_in,
+.hljs-name {
+  color: #005cc5;
+}
+
+.hljs-attr {
+  color: #005cc5;
+}
+
+.hljs-params {
+  color: #24292e;
+}
+
+.hljs-addition {
+  color: #22863a;
+  background-color: #f0fff4;
+}
+
+.hljs-deletion {
+  color: #b31d28;
+  background-color: #ffeef0;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* ── Highlight.js — Midnight Blue dark theme ── */
+.dark .hljs {
+  color: #c9d1e0;
+  background: transparent;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #5c6380;
+  font-style: italic;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-type {
+  color: #c678dd;
+}
+
+.dark .hljs-literal,
+.dark .hljs-number,
+.dark .hljs-tag .hljs-attr,
+.dark .hljs-template-variable,
+.dark .hljs-variable {
+  color: #61afef;
+}
+
+.dark .hljs-string,
+.dark .hljs-doctag,
+.dark .hljs-regexp {
+  color: #98c379;
+}
+
+.dark .hljs-title,
+.dark .hljs-title.class_,
+.dark .hljs-section,
+.dark .hljs-selector-id {
+  color: #e5c07b;
+  font-weight: 600;
+}
+
+.dark .hljs-subst {
+  color: #c9d1e0;
+}
+
+.dark .hljs-symbol,
+.dark .hljs-bullet {
+  color: #d19a66;
+}
+
+.dark .hljs-link,
+.dark .hljs-meta,
+.dark .hljs-selector-class {
+  color: #61afef;
+}
+
+.dark .hljs-built_in,
+.dark .hljs-name {
+  color: #56b6c2;
+}
+
+.dark .hljs-attr {
+  color: #d19a66;
+}
+
+.dark .hljs-params {
+  color: #c9d1e0;
+}
+
+.dark .hljs-addition {
+  color: #98c379;
+  background-color: rgba(152, 195, 121, 0.1);
+}
+
+.dark .hljs-deletion {
+  color: #e06c75;
+  background-color: rgba(224, 108, 117, 0.1);
+}
+
+.dark .hljs-emphasis {
+  font-style: italic;
+}
+
+.dark .hljs-strong {
+  font-weight: 700;
+}

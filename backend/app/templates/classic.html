@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    @page {
+      size: letter;
+      margin: 1.5cm;
+    }
+
+    body {
+      font-family: "Helvetica", "Arial", sans-serif;
+      line-height: 1.4;
+      color: #111;
+      font-size: 11pt;
+    }
+
+    h1 {
+      font-size: 26pt;
+      margin-bottom: 5px;
+      text-align: center;
+      color: #000;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      font-size: 13pt;
+      margin-top: 15px;
+      margin-bottom: 8px;
+      border-bottom: 1.5px solid #000;
+      text-transform: uppercase;
+      color: #000;
+      font-weight: bold;
+      padding-bottom: 2px;
+    }
+
+    .contact {
+      font-size: 10pt;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #444;
+    }
+
+    .job-header {
+      width: 100%;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .job-title {
+      font-weight: bold;
+      font-size: 12pt;
+      color: #000;
+    }
+
+    .company {
+      font-style: italic;
+      font-size: 11pt;
+    }
+
+    .date {
+      text-align: right;
+      font-size: 10pt;
+      color: #444;
+    }
+
+    ul {
+      margin-top: 0px;
+      margin-bottom: 10px;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 4px;
+      text-align: justify;
+    }
+
+    .skills-list {
+      margin-top: 5px;
+    }
+
+    .skills-item {
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>{{ resume.name }}</h1>
+  <div class="contact">
+    {{ resume.email }} | {{ resume.phone }}
+    {% if resume.linkedin %} | {{ resume.linkedin }}{% endif %}
+    {% if resume.portfolio %} | {{ resume.portfolio }}{% endif %}
+  </div>
+
+  <h2>Professional Summary</h2>
+  <p style="text-align: justify; margin-top: 5px;">{{ resume.summary }}</p>
+
+  <h2>Experience</h2>
+  {% for exp in resume.experiences %}
+  <table class="job-header">
+    <tr>
+      <td style="width: 70%; text-align: left;">
+        <span class="job-title">{{ exp.title }}</span>, <span class="company">{{ exp.company }}</span>
+      </td>
+      <td style="width: 30%;" class="date">
+        {{ exp.start_date }} - {{ exp.end_date }}
+      </td>
+    </tr>
+  </table>
+  <ul>
+    {% for bullet in exp.description %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+
+  <h2>Education</h2>
+  {% for edu in resume.education %}
+  <table class="job-header">
+    <tr>
+      <td style="width: 70%; text-align: left;">
+        <span class="job-title">{{ edu.degree }}</span>, <span class="company">{{ edu.institution }}</span>
+      </td>
+      <td style="width: 30%;" class="date">
+        {{ edu.graduation_date }}
+      </td>
+    </tr>
+  </table>
+  {% endfor %}
+
+  <h2>Skills</h2>
+  <div class="skills-list">
+    {% for skill_cat in resume.skills %}
+    <div class="skills-item"><strong>{{ skill_cat.category }}:</strong> {{ skill_cat.skills | join(', ') }}</div>
+    {% endfor %}
+  </div>
+</body>
+
+</html>
