@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.analysis import BulletRewriteRequest, SummaryRewriteRequest
-from app.agents.writer_agent import rewrite_bullets, generate_summary
+from app.schemas.analysis import BulletRewriteRequest, SummaryRewriteRequest, CoverLetterRequest
+from app.agents.writer_agent import rewrite_bullets, generate_summary, generate_cover_letter
 
 router = APIRouter()
 
@@ -19,3 +19,14 @@ async def generate_resume_summary(req: SummaryRewriteRequest):
         return {"summary": summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/cover-letter")
+async def generate_cover_letter_route(req: CoverLetterRequest):
+    try:
+        # Dump the resume object to a formatted string for the LLM context
+        resume_text = req.resume.model_dump_json()
+        cover_letter = await generate_cover_letter(resume_text, req.job_description)
+        return {"cover_letter": cover_letter}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -7,3 +7,6 @@ data/uploads/*
 data/exports/*
 !data/exports/.gitkeep
 .pytest_cache/
+.env
+.env.local
+.env.*.local

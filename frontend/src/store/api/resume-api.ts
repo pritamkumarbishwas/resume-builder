@@ -40,6 +40,26 @@ export const resumeApi = createApi({
         body,
       }),
     }),
+    getAtsScore: builder.mutation<
+      { score: number; matching_keywords: string[]; missing_keywords: string[]; recommendations: string[] },
+      { resume: Resume; job_description: string }
+    >({
+      query: (body) => ({
+        url: "/api/analyze/ats-score",
+        method: "POST",
+        body,
+      }),
+    }),
+    generateCoverLetter: builder.mutation<
+      { cover_letter: string },
+      { resume: Resume; job_description: string }
+    >({
+      query: (body) => ({
+        url: "/api/tailor/cover-letter",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 })
 
@@ -47,4 +67,6 @@ export const {
   useUploadResumeMutation,
   useRewriteBulletsMutation,
   useGenerateSummaryMutation,
+  useGetAtsScoreMutation,
+  useGenerateCoverLetterMutation,
 } = resumeApi

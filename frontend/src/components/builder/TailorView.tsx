@@ -3,11 +3,13 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   useRewriteBulletsMutation,
   useGenerateSummaryMutation,
+  useGetAtsScoreMutation
 } from "@/store/api/resume-api"
 import { updateExperienceBullets, updateSummary } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, Download, CheckCircle2, ChevronRight, Briefcase, Copy, Check } from "lucide-react"
+import { Sparkles, Download, CheckCircle2, Briefcase, Copy, Check, FileText } from "lucide-react"
+import { ATSScorePanel } from "./ATSScorePanel"
+import { CoverLetterModal } from "./CoverLetterModal"
 
 function AutoResizeTextarea({ value, onChange, className, minHeight = '48px', placeholder }: { value: string, onChange: (val: string) => void, className: string, minHeight?: string, placeholder?: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -39,9 +41,22 @@ export function TailorView() {
 
   const [rewriteBullets, { isLoading: isRewriting }] = useRewriteBulletsMutation()
   const [generateSummary, { isLoading: isGenerating }] = useGenerateSummaryMutation()
+  const [getAtsScore, { isLoading: isScoring }] = useGetAtsScoreMutation()
 
   const [activeExpIndex, setActiveExpIndex] = useState<number | null>(null)
   const [copiedExpIndex, setCopiedExpIndex] = useState<number | null>(null)
+  const [atsData, setAtsData] = useState<any>(null)
+  const [showCoverLetter, setShowCoverLetter] = useState(false)
+
+  // Fetch ATS score when component mounts
+  useEffect(() => {
+    if (resume && jobDescription && !atsData && !isScoring) {
+      getAtsScore({ resume, job_description: jobDescription })
+        .unwrap()
+        .then(setAtsData)
+        .catch(console.error)
+    }
+  }, [resume, jobDescription])
 
   if (!resume) return null
 
@@ -110,13 +125,23 @@ export function TailorView() {
           <h2 className="text-3xl font-extrabold tracking-tight">Optimize Your Resume</h2>
           <p className="text-muted-foreground">Perfect your resume. Let our AI tailor your experience to match the exact requirements of your target role.</p>
         </div>
-        <Button
-          size="lg"
-          onClick={handleExport}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6"
-        >
-          <Download className="w-4 h-4 mr-2" /> Download Resume
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => setShowCoverLetter(true)}
+            className="rounded-full px-6 shadow-sm border-border/50 hover:bg-muted/50"
+          >
+            <FileText className="w-4 h-4 mr-2" /> Cover Letter
+          </Button>
+          <Button
+            size="lg"
+            onClick={handleExport}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg rounded-full px-6"
+          >
+            <Download className="w-4 h-4 mr-2" /> Download Resume
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
@@ -254,18 +279,43 @@ export function TailorView() {
           </div>
         </div>
 
-        {/* Right Column: Job Description Reference */}
-        <div className="bg-card/30 backdrop-blur-xl border border-border rounded-3xl p-6 flex flex-col h-full overflow-hidden shadow-inner">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-semibold text-lg">Target Job</h3>
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar text-sm text-muted-foreground pr-2 pb-4 whitespace-pre-wrap">
-            {jobDescription}
+        {/* Right Column: Job Description & ATS Score */}
+        <div className="flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 pb-20">
+
+          {/* ATS Score Panel */}
+          {isScoring && !atsData ? (
+            <div className="bg-card/30 backdrop-blur-xl border border-border shadow-xl rounded-2xl p-6 flex flex-col items-center justify-center h-48 animate-pulse">
+              <div className="w-8 h-8 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mb-4" />
+              <p className="text-sm font-medium text-muted-foreground">Analyzing ATS Compatibility...</p>
+            </div>
+          ) : atsData ? (
+            <ATSScorePanel
+              score={atsData.score}
+              matchingKeywords={atsData.matching_keywords}
+              missingKeywords={atsData.missing_keywords}
+              recommendations={atsData.recommendations}
+            />
+          ) : null}
+
+          <div className="bg-card/30 backdrop-blur-xl border border-border rounded-2xl p-6 flex flex-col min-h-0 shadow-inner flex-1">
+            <div className="flex items-center gap-2 mb-4 shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <h3 className="font-semibold text-lg">Target Job</h3>
+            </div>
+            <div className="overflow-y-auto custom-scrollbar text-sm text-muted-foreground pr-2 pb-4 whitespace-pre-wrap">
+              {jobDescription}
+            </div>
           </div>
         </div>
 
       </div>
+
+      <CoverLetterModal
+        isOpen={showCoverLetter}
+        onClose={() => setShowCoverLetter(false)}
+        resume={resume}
+        jobDescription={jobDescription}
+      />
     </div>
   )
 }
