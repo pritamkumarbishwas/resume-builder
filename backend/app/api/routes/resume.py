@@ -10,13 +10,14 @@ router = APIRouter()
 
 @router.post("/upload", response_model=Resume)
 async def upload_resume(file: UploadFile = File(...)):
-    if not file.filename.endswith(('.pdf', '.docx')):
+    filename = file.filename or ""
+    if not filename.lower().endswith(('.pdf', '.docx')):
         raise HTTPException(status_code=400, detail="Only PDF or DOCX allowed")
-    
-    logger.info(f"Uploading and parsing file: {file.filename}")
+
+    logger.info(f"Uploading and parsing file: {filename}")
     try:
         content = await file.read()
-        raw_text = extract_text(content, file.filename)
+        raw_text = extract_text(content, filename)
         resume_obj = await parse_resume_text(raw_text)
         
         db = await get_db()

@@ -1,4 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from urllib.parse import urlparse
 from app.config import settings
 import logging
 
@@ -12,11 +13,8 @@ class Database:
     def connect_db(cls):
         logger.info("Connecting to MongoDB...")
         cls.client = AsyncIOMotorClient(settings.mongo_uri)
-        try:
-            db_name = cls.client.get_database().name
-        except Exception:
-            db_name = "resume_builder"
-            
+        path_db = urlparse(settings.mongo_uri).path.lstrip("/").split("/")[0]
+        db_name = path_db if path_db else "resume_builder"
         cls.db = cls.client[db_name]
         logger.info(f"Connected to database: {db_name}")
 

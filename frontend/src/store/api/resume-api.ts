@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 import type { Resume } from "../slices/resume-slice"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
 
 export const resumeApi = createApi({
   reducerPath: "resumeApi",

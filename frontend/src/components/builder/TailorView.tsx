@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   useRewriteBulletsMutation,
   useGenerateSummaryMutation,
   useGetAtsScoreMutation
 } from "@/store/api/resume-api"
+import { API_BASE_URL } from "@/store/api/resume-api"
 import { updateExperienceBullets, updateSummary } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
 import { Sparkles, Download, CheckCircle2, Briefcase, Copy, Check, FileText } from "lucide-react"
@@ -48,15 +49,56 @@ export function TailorView() {
   const [atsData, setAtsData] = useState<any>(null)
   const [showCoverLetter, setShowCoverLetter] = useState(false)
 
-  // Fetch ATS score when component mounts
-  useEffect(() => {
-    if (resume && jobDescription && !atsData && !isScoring) {
-      getAtsScore({ resume, job_description: jobDescription })
-        .unwrap()
-        .then(setAtsData)
-        .catch(console.error)
+  const resumeRef = useRef(resume)
+  const jobDescRef = useRef(jobDescription)
+  resumeRef.current = resume
+  jobDescRef.current = jobDescription
+
+  const lastScoredKeyRef = useRef<string | null>(null)
+  const inFlightRef = useRef(false)
+  const needsRescoreRef = useRef(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const runAtsScore = useCallback(async () => {
+    if (inFlightRef.current) {
+      needsRescoreRef.current = true
+      return
     }
-  }, [resume, jobDescription])
+    const r = resumeRef.current
+    const jd = jobDescRef.current
+    if (!r || !jd) return
+
+    const key = JSON.stringify({ resume: r, job_description: jd })
+    if (key === lastScoredKeyRef.current) return
+
+    inFlightRef.current = true
+    try {
+      const data = await getAtsScore({ resume: r, job_description: jd }).unwrap()
+      setAtsData(data)
+      lastScoredKeyRef.current = key
+    } catch (err) {
+      console.error(err)
+    } finally {
+      inFlightRef.current = false
+      if (needsRescoreRef.current) {
+        needsRescoreRef.current = false
+        void runAtsScore()
+      }
+    }
+  }, [getAtsScore])
+
+  // Debounced ATS rescore on resume/JD changes (skips StrictMode double-mount via cleanup)
+  useEffect(() => {
+    if (!resume || !jobDescription) return
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    const delay = lastScoredKeyRef.current === null ? 0 : 1000
+    debounceRef.current = setTimeout(() => {
+      void runAtsScore()
+    }, delay)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [resume, jobDescription, runAtsScore])
 
   if (!resume) return null
 
@@ -97,7 +139,7 @@ export function TailorView() {
 
   const handleExport = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/export/pdf", {
+      const res = await fetch(`${API_BASE_URL}/api/export/pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resume),
@@ -289,12 +331,20 @@ export function TailorView() {
               <p className="text-sm font-medium text-muted-foreground">Analyzing ATS Compatibility...</p>
             </div>
           ) : atsData ? (
-            <ATSScorePanel
-              score={atsData.score}
-              matchingKeywords={atsData.matching_keywords}
-              missingKeywords={atsData.missing_keywords}
-              recommendations={atsData.recommendations}
-            />
+            <div className="relative">
+              {isScoring && (
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm border border-border/50 rounded-full px-2.5 py-1">
+                  <div className="w-3 h-3 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+                  Updating...
+                </div>
+              )}
+              <ATSScorePanel
+                score={atsData.score}
+                matchingKeywords={atsData.matching_keywords}
+                missingKeywords={atsData.missing_keywords}
+                recommendations={atsData.recommendations}
+              />
+            </div>
           ) : null}
 
           <div className="bg-card/30 backdrop-blur-xl border border-border rounded-2xl p-6 flex flex-col min-h-0 shadow-inner flex-1">

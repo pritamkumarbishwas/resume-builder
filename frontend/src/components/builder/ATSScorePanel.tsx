@@ -15,14 +15,7 @@ export function ATSScorePanel({ score, matchingKeywords, missingKeywords, recomm
     return "text-rose-500"
   }
 
-  const getScoreBg = (s: number) => {
-    if (s >= 80) return "bg-emerald-500"
-    if (s >= 60) return "bg-amber-500"
-    return "bg-rose-500"
-  }
-
   const scoreColor = getScoreColor(score)
-  const scoreBg = getScoreBg(score)
 
   return (
     <div className="bg-card/50 backdrop-blur-xl border border-border shadow-xl rounded-2xl p-6 flex flex-col relative overflow-hidden">

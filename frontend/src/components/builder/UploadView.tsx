@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { UploadCloud, FileText } from "lucide-react"
+import { UploadCloud } from "lucide-react"
 import { useUploadResumeMutation } from "@/store/api/resume-api"
 import { setResume, setStep } from "@/store/slices/resume-slice"
 import { useAppDispatch } from "@/store/hooks"
@@ -12,7 +12,7 @@ export function UploadView() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = async (file: File) => {
-    if (file.type !== "application/pdf" && !file.name.endsWith(".docx")) {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".docx")) {
       alert("Please upload a PDF or DOCX file.")
       return
     }

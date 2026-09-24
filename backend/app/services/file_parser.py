@@ -11,7 +11,11 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     doc = docx.Document(io.BytesIO(file_bytes))
-    return "\n".join([paragraph.text for paragraph in doc.paragraphs])
+    parts = [paragraph.text for paragraph in doc.paragraphs]
+    for table in doc.tables:
+        for row in table.rows:
+            parts.append(" | ".join(cell.text for cell in row.cells))
+    return "\n".join(parts)
     
 def extract_text(file_bytes: bytes, filename: str) -> str:
     if filename.lower().endswith('.pdf'):
