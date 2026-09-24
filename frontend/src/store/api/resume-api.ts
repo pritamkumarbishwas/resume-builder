@@ -50,6 +50,39 @@ export const resumeApi = createApi({
         body,
       }),
     }),
+    getGapReport: builder.mutation<
+      any,
+      { resume: Resume; job_description: string }
+    >({
+      query: (body) => ({
+        url: "/api/analyze/gap-report",
+        method: "POST",
+        body,
+      }),
+    }),
+    chatEdit: builder.mutation<
+      { assistant_message: string; updated_resume: Resume },
+      { resume: Resume; job_description: string; messages: any[]; user_message: string }
+    >({
+      query: (body) => ({
+        url: "/api/tailor/chat-edit",
+        method: "POST",
+        body,
+      }),
+    }),
+    saveVersion: builder.mutation<
+      any,
+      { session_id: string; label: string; resume: Resume; job_description: string; ats_score: number }
+    >({
+      query: (body) => ({
+        url: "/api/resume/versions/save",
+        method: "POST",
+        body,
+      }),
+    }),
+    getVersions: builder.query<any[], string>({
+      query: (session_id) => `/api/resume/versions/${session_id}`,
+    }),
     generateCoverLetter: builder.mutation<
       { cover_letter: string },
       { resume: Resume; job_description: string }
@@ -68,5 +101,9 @@ export const {
   useRewriteBulletsMutation,
   useGenerateSummaryMutation,
   useGetAtsScoreMutation,
+  useGetGapReportMutation,
+  useChatEditMutation,
+  useSaveVersionMutation,
+  useGetVersionsQuery,
   useGenerateCoverLetterMutation,
 } = resumeApi

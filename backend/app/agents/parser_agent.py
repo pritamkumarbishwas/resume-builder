@@ -10,11 +10,38 @@ async def parse_resume_text(raw_text: str) -> Resume:
     You are an expert resume parser. Extract the information from the provided resume text into a structured JSON format matching the provided Resume schema.
     If some fields like 'portfolio' or 'linkedin' are missing, set them to null.
     Structure the experience, education, and skills clearly.
-    Output ONLY valid JSON.
+    Output MUST be a valid JSON object with the following exact structure:
+    {
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "123-456-7890",
+      "linkedin": "linkedin.com/in/johndoe",
+      "portfolio": null,
+      "summary": "Experienced engineer...",
+      "experiences": [
+        {
+          "title": "Software Engineer",
+          "company": "Tech Corp",
+          "start_date": "2020",
+          "end_date": "Present",
+          "description": ["Developed features", "Fixed bugs"]
+        }
+      ],
+      "education": [
+        {
+          "degree": "B.S. Computer Science",
+          "institution": "University",
+          "graduation_date": "2020"
+        }
+      ],
+      "skills": [
+        {
+          "category": "Languages",
+          "skills": ["Python", "JavaScript"]
+        }
+      ]
+    }
     """
-    
-    schema = Resume.model_json_schema()
-    system_prompt += f"\n\nJSON Schema:\n{json.dumps(schema)}"
 
     logger.info("Extracting resume data using LLM...")
     try:

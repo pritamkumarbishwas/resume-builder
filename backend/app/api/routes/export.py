@@ -30,11 +30,17 @@ def sanitize_text(data):
     return data
 
 @router.post("/pdf")
-async def export_pdf(resume: Resume):
+async def export_pdf(resume: Resume, template: str = "classic"):
     try:
-        template = env.get_template('classic.html')
+        # Fallback to classic if template doesn't exist
+        template_file = f'{template}.html'
+        try:
+            html_template = env.get_template(template_file)
+        except Exception:
+            html_template = env.get_template('classic.html')
+            
         sanitized_data = sanitize_text(resume.model_dump())
-        html_out = template.render(resume=sanitized_data)
+        html_out = html_template.render(resume=sanitized_data)
         
         result_file = io.BytesIO()
         pisa_status = pisa.CreatePDF(html_out, dest=result_file, encoding='utf-8')

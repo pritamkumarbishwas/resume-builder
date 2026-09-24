@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.analysis import BulletRewriteRequest, SummaryRewriteRequest, CoverLetterRequest
+from app.schemas.analysis import BulletRewriteRequest, SummaryRewriteRequest, CoverLetterRequest, ChatEditRequest
 from app.agents.writer_agent import rewrite_bullets, generate_summary, generate_cover_letter
+from app.agents.clarifier import process_chat_edit
 
 router = APIRouter()
 
@@ -27,6 +28,13 @@ async def generate_cover_letter_route(req: CoverLetterRequest):
         resume_text = req.resume.model_dump_json()
         cover_letter = await generate_cover_letter(resume_text, req.job_description)
         return {"cover_letter": cover_letter}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/chat-edit")
+async def handle_chat_edit(req: ChatEditRequest):
+    try:
+        return await process_chat_edit(req.resume, req.job_description, req.messages, req.user_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
