@@ -1,8 +1,11 @@
 from openai import AsyncOpenAI
 from app.config import settings
+import asyncio
 import json
 import re
 import logging
+
+logger = logging.getLogger(__name__)
 
 class LLMClient:
     def __init__(self):
@@ -18,48 +21,71 @@ class LLMClient:
                 api_key=settings.openai_api_key
             )
             self.model = settings.openai_model
+        self._supports_reasoning_effort = "gpt-oss" in self.model or "o3" in self.model or "o4" in self.model
 
-    async def generate_json(self, system_prompt: str, user_prompt: str) -> dict:
-        """Call LLM requiring JSON output"""
-        strict_json_prompt = system_prompt + "\n\nCRITICAL: Output ONLY a raw, valid JSON object. Do NOT wrap it in ```json code blocks. Do NOT output any preamble or conversational text."
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": strict_json_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3
-        )
-        original_content = response.choices[0].message.content
-        content = original_content.strip()
+    def _request_kwargs(self, temperature: float) -> dict:
+        kwargs = {"temperature": temperature}
+        if self._supports_reasoning_effort:
+            kwargs["reasoning_effort"] = "low"
+            kwargs["max_completion_tokens"] = 4096
+        return kwargs
+
+    async def generate_json(self, system_prompt: str, user_prompt: str, max_retries: int = 4) -> dict:
+        """Call LLM requiring JSON output with retry logic"""
+        strict_json_prompt = system_prompt + "\n\nCRITICAL: Return ONLY a raw JSON object. Do not include markdown formatting, backticks, or any conversational text."
         
-        # Manually extract JSON to bypass Groq's strict/buggy json_object validation
-        if "```" in content:
-            # Try to extract content between backticks
-            match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
-            if match:
-                content = match.group(1)
-        else:
-            # Fallback: extract everything between the first { and last }
-            # (or first [ and last ])
-            start_obj = content.find("{")
-            end_obj = content.rfind("}")
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                response = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": strict_json_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    **self._request_kwargs(0.3)
+                )
+                choice = response.choices[0]
+                original_content = choice.message.content or ""
+                content = original_content.strip()
+                
+                if not content:
+                    details = getattr(response.usage, "completion_tokens_details", None)
+                    reasoning_tokens = getattr(details, "reasoning_tokens", None) if details else None
+                    logger.warning(
+                        "Empty LLM content (attempt %s/%s): finish_reason=%s, completion_tokens=%s, reasoning_tokens=%s, model=%s",
+                        attempt + 1, max_retries, choice.finish_reason,
+                        response.usage.completion_tokens if response.usage else None,
+                        reasoning_tokens, self.model,
+                    )
+                    raise ValueError("LLM returned an empty string.")
+                
+                # Manually extract JSON to bypass strict/buggy json_object validation
+                if "```" in content:
+                    match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+                    if match:
+                        content = match.group(1)
+                else:
+                    start_obj = content.find("{")
+                    end_obj = content.rfind("}")
+                    start_arr = content.find("[")
+                    end_arr = content.rfind("]")
+                    
+                    if start_obj != -1 and end_obj != -1 and start_obj < end_obj and (start_arr == -1 or start_obj < start_arr):
+                        content = content[start_obj:end_obj + 1]
+                    elif start_arr != -1 and end_arr != -1 and start_arr < end_arr:
+                        content = content[start_arr:end_arr + 1]
+                
+                return json.loads(content.strip())
             
-            start_arr = content.find("[")
-            end_arr = content.rfind("]")
-            
-            # Use whichever comes first, object or array
-            if start_obj != -1 and end_obj != -1 and start_obj < end_obj and (start_arr == -1 or start_obj < start_arr):
-                content = content[start_obj:end_obj + 1]
-            elif start_arr != -1 and end_arr != -1 and start_arr < end_arr:
-                content = content[start_arr:end_arr + 1]
-        
-        try:
-            return json.loads(content.strip())
-        except json.JSONDecodeError as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to parse JSON. Raw LLM output: {repr(original_content)}")
-            raise ValueError(f"LLM returned invalid JSON. Raw output: {repr(original_content)}") from e
+            except Exception as e:
+                last_error = e
+                logger.warning("Attempt %s/%s failed. Retrying... Error: %s", attempt + 1, max_retries, e)
+                if attempt + 1 < max_retries:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+
+        logger.error("Failed to get valid JSON after %s attempts. Last error: %s", max_retries, last_error)
+        raise ValueError(f"LLM returned invalid JSON. Error: {last_error}") from last_error
 
     async def generate_text(self, system_prompt: str, user_prompt: str) -> str:
         """Call LLM returning raw text"""
@@ -69,7 +95,7 @@ class LLMClient:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.7
+            **self._request_kwargs(0.7)
         )
         return response.choices[0].message.content
 
