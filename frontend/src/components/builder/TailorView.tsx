@@ -284,10 +284,43 @@ export function TailorView() {
   // Presentation-only helpers (derived from state already in the store)
   const jdNormalized = normalizeMatchText(jobDescription)
   const isSkillInJD = (skill: string) => containsToken(jdNormalized, skill)
-  const allSkills = (resume.skills || []).flatMap((group) => group.skills || [])
-  const matchedSkillCount = allSkills.filter(isSkillInJD).length
-  const jdWordCount = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0
   const skillGroups = resume.skills || []
+
+  // Unique, non-empty skills: chips can repeat a skill across groups and the
+  // parser can emit blanks — neither belongs in the counts
+  const seenSkills = new Set<string>()
+  const allSkills: string[] = []
+  for (const raw of skillGroups.flatMap((group) => group.skills || [])) {
+    const skill = raw.trim()
+    if (!skill) continue
+    const key = skill.toLowerCase()
+    if (seenSkills.has(key)) continue
+    seenSkills.add(key)
+    allSkills.push(skill)
+  }
+
+  // One source of truth for the "N matched" badge and the ATS panel
+  const matchedSkills = allSkills.filter(isSkillInJD)
+  const matchedSkillCount = matchedSkills.length
+  const jdWordCount = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0
+
+  // Everything the resume actually mentions — used to drop false "missing" keywords
+  const resumeNormalized = normalizeMatchText(
+    [
+      resume.summary || "",
+      ...(resume.experiences || []).flatMap((exp) => [exp.title, exp.company, ...(exp.description || [])]),
+      ...(resume.projects || []).flatMap((p) => [p.name, ...(p.technologies || []), ...(p.description || [])]),
+      ...(resume.education || []).flatMap((e) => [e.degree, e.institution]),
+      ...allSkills,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  )
+
+  const isPresentInResume = (keyword: string) =>
+    includesTerm(allSkills, keyword) ||
+    containsToken(resumeNormalized, keyword) ||
+    allSkills.some((skill) => containsToken(normalizeMatchText(keyword), skill))
 
   // Click a missing keyword/skill in the analysis panels → add it to the
   // group it best belongs to (category name first, then related skills)
@@ -878,8 +911,8 @@ export function TailorView() {
                 )}
                 <ATSScorePanel
                   score={atsData.score}
-                  matchingKeywords={atsData.matching_keywords}
-                  missingKeywords={atsData.missing_keywords}
+                  matchingKeywords={matchedSkills}
+                  missingKeywords={(atsData.missing_keywords || []).filter((kw: string) => !isPresentInResume(kw))}
                   recommendations={atsData.recommendations}
                   skills={allSkills}
                   onAddKeyword={handleAddKeyword}
