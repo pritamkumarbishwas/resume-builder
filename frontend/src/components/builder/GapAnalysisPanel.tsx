@@ -16,6 +16,7 @@ interface GapAnalysisPanelProps {
   recommendations: string[]
   skills?: string[]
   onAddKeyword?: (keyword: string) => void
+  updating?: boolean
 }
 
 function MissingChip({
@@ -75,6 +76,7 @@ export function GapAnalysisPanel({
   recommendations,
   skills = [],
   onAddKeyword,
+  updating = false,
 }: GapAnalysisPanelProps) {
   return (
     <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-5 sm:p-6 flex flex-col relative overflow-hidden h-full">
@@ -86,7 +88,15 @@ export function GapAnalysisPanel({
                 <Target className="w-4 h-4 text-violet-500" />
               </div>
               <div className="leading-tight">
-                <h3 className="text-lg font-bold tracking-tight">Gap Analysis</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-lg font-bold tracking-tight">Gap Analysis</h3>
+                  {updating && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="h-3 w-3 border-2 border-amber-500/40 border-t-amber-500 rounded-full animate-spin" aria-hidden="true" />
+                      Updating...
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">Deep dive into missing requirements</p>
               </div>
             </div>

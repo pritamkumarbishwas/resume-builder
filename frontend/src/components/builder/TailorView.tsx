@@ -24,7 +24,7 @@ import { setResume, setJobDescription } from "@/store/slices/resume-slice"
 function PanelSkeleton({ label, accent = "violet" }: { label: string; accent?: "violet" | "amber" }) {
   const spin = accent === "amber" ? "border-amber-500/40 border-t-amber-500" : "border-violet-500/40 border-t-violet-500"
   return (
-    <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-6">
+    <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-6 h-full">
       <div className="flex items-center gap-2.5 mb-5">
         <div className={`w-5 h-5 border-2 rounded-full animate-spin ${spin}`} />
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -591,8 +591,50 @@ export function TailorView() {
         {/* Main Workspace (Takes full width unless history is open) */}
         <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0 pb-6 md:pb-0 overflow-y-auto md:overflow-hidden custom-scrollbar transition-all duration-300 ${showHistory ? 'hidden md:grid' : ''}`}>
 
-          {/* Left Column: Parsed Data Edit Area */}
+          {/* Left Column: Live Analysis + Parsed Data Edit Area */}
           <div className="md:col-span-2 space-y-6 md:overflow-y-auto md:pr-2 md:pb-6 custom-scrollbar">
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                Live analysis
+              </span>
+              <span className="h-px flex-1 bg-border/70" />
+            </div>
+
+            {/* Analysis panels — full width, ATS first then Gap */}
+            <div className="flex flex-col gap-6">
+              {/* ATS Score Panel */}
+              {isScoring && !atsData ? (
+                <PanelSkeleton label="Analyzing ATS compatibility..." />
+              ) : atsData ? (
+                <ATSScorePanel
+                  score={atsData.score}
+                  matchingKeywords={matchedSkills}
+                  missingKeywords={(atsData.missing_keywords || []).filter((kw: string) => !isPresentInResume(kw))}
+                  recommendations={atsData.recommendations}
+                  skills={allSkills}
+                  onAddKeyword={handleAddKeyword}
+                  updating={isScoring}
+                />
+              ) : null}
+
+              {/* Gap Analysis Panel */}
+              {isGapLoading && !gapData ? (
+                <PanelSkeleton label="Running gap analysis..." accent="amber" />
+              ) : gapData ? (
+                <GapAnalysisPanel
+                  overallMatchPercent={gapData.overall_match_percent}
+                  matchedSkills={gapData.matched_skills}
+                  missingRequired={gapData.missing_required}
+                  missingPreferred={gapData.missing_preferred}
+                  relevantExperiences={gapData.relevant_experiences}
+                  recommendations={gapData.recommendations}
+                  skills={allSkills}
+                  onAddKeyword={handleAddKeyword}
+                  updating={isGapLoading}
+                />
+              ) : null}
+            </div>
+
             <div className="flex items-center gap-3" aria-hidden="true">
               <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
                 Your resume · edit anything
@@ -980,61 +1022,8 @@ export function TailorView() {
             )}
           </div>
 
-          {/* Right Column: Job Description & ATS Score */}
+          {/* Right Column: Job Description */}
           <div className="flex flex-col gap-6 md:overflow-y-auto md:pb-6 custom-scrollbar">
-            <div className="flex items-center gap-3" aria-hidden="true">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Live analysis
-              </span>
-              <span className="h-px flex-1 bg-border/70" />
-            </div>
-
-            {/* ATS Score Panel */}
-            {isScoring && !atsData ? (
-              <PanelSkeleton label="Analyzing ATS compatibility..." />
-            ) : atsData ? (
-              <div className="relative">
-                {isScoring && (
-                  <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-background/85 backdrop-blur-sm border border-border/60 rounded-full px-2.5 py-1">
-                    <div className="w-3 h-3 border-2 border-violet-500/40 border-t-violet-500 rounded-full animate-spin" />
-                    Updating...
-                  </div>
-                )}
-                <ATSScorePanel
-                  score={atsData.score}
-                  matchingKeywords={matchedSkills}
-                  missingKeywords={(atsData.missing_keywords || []).filter((kw: string) => !isPresentInResume(kw))}
-                  recommendations={atsData.recommendations}
-                  skills={allSkills}
-                  onAddKeyword={handleAddKeyword}
-                />
-              </div>
-            ) : null}
-
-            {/* Gap Analysis Panel */}
-            {isGapLoading && !gapData ? (
-              <PanelSkeleton label="Running gap analysis..." accent="amber" />
-            ) : gapData ? (
-              <div className="relative">
-                {isGapLoading && (
-                  <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-background/85 backdrop-blur-sm border border-border/60 rounded-full px-2.5 py-1">
-                    <div className="w-3 h-3 border-2 border-amber-500/40 border-t-amber-500 rounded-full animate-spin" />
-                    Updating...
-                  </div>
-                )}
-                <GapAnalysisPanel
-                  overallMatchPercent={gapData.overall_match_percent}
-                  matchedSkills={gapData.matched_skills}
-                  missingRequired={gapData.missing_required}
-                  missingPreferred={gapData.missing_preferred}
-                  relevantExperiences={gapData.relevant_experiences}
-                  recommendations={gapData.recommendations}
-                  skills={allSkills}
-                  onAddKeyword={handleAddKeyword}
-                />
-              </div>
-            ) : null}
-
             <div className="relative flex flex-col min-h-[220px] flex-1 overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-lg backdrop-blur-xl">
               <div className="flex items-start justify-between gap-3 border-b border-border/60 p-4 sm:p-5 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">

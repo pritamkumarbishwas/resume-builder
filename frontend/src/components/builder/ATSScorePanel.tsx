@@ -8,6 +8,7 @@ interface ATSScorePanelProps {
   recommendations: string[];
   skills?: string[];
   onAddKeyword?: (keyword: string) => void;
+  updating?: boolean;
 }
 
 export function ATSScorePanel({
@@ -17,6 +18,7 @@ export function ATSScorePanel({
   recommendations,
   skills = [],
   onAddKeyword,
+  updating = false,
 }: ATSScorePanelProps) {
   // Determine color based on score
   const getScoreColor = (s: number) => {
@@ -40,16 +42,24 @@ export function ATSScorePanel({
   const scoreColor = getScoreColor(score)
 
   return (
-    <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-5 sm:p-6 flex flex-col relative overflow-hidden">
-      <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="@container bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-5 sm:p-6 flex flex-col relative overflow-hidden h-full">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <h3 className="text-lg font-bold tracking-tight">ATS Match Score</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-bold tracking-tight">ATS Match Score</h3>
+            {updating && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <span className="h-3 w-3 border-2 border-violet-500/40 border-t-violet-500 rounded-full animate-spin" aria-hidden="true" />
+                Updating...
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">Compared against your target job description</p>
           <span className={`inline-block mt-2 text-xs font-semibold px-2.5 py-1 rounded-full ${getScoreBadge(score)}`}>
             {getScoreLabel(score)}
           </span>
         </div>
-        <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
+        <div className="relative w-20 h-20 @md:w-24 @md:h-24 flex items-center justify-center shrink-0">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
             <path
               className="text-muted/40"
@@ -79,7 +89,7 @@ export function ATSScorePanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="flex flex-col gap-5">
         {/* Missing Keywords */}
         <div className="space-y-2.5">
           <div>
