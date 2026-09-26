@@ -268,7 +268,9 @@ export function TailorView() {
   useEffect(() => {
     if (!resume || !jobDescription) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    const delay = lastScoredKeyRef.current === null ? 0 : 1000
+    // 2.5s of quiet before rescoring: each run costs 2 LLM calls and the
+    // model has a tight TPM rate limit, so avoid firing on typing pauses
+    const delay = lastScoredKeyRef.current === null ? 0 : 2500
     debounceRef.current = setTimeout(() => {
       void runAtsScore()
     }, delay)
