@@ -9,7 +9,7 @@ import {
 import { API_BASE_URL } from "@/store/api/resume-api"
 import { updateExperienceBullets, updateSummary, updateSkillGroup, updateSkillCategory, addSkillGroup, removeSkillGroup } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, Target, X, Plus } from "lucide-react"
+import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, Target, X, Plus, FolderGit2, GraduationCap } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
 import { CoverLetterModal } from "./CoverLetterModal"
 import { GapAnalysisPanel } from "./GapAnalysisPanel"
@@ -193,6 +193,16 @@ type SkillEdit =
   | { type: "add"; group: number }
   | { type: "category"; group: number }
 
+const RESUME_TABS = [
+  { id: "summary", label: "Summary", icon: Sparkles },
+  { id: "experience", label: "Experience", icon: Briefcase },
+  { id: "projects", label: "Projects", icon: FolderGit2 },
+  { id: "education", label: "Education", icon: GraduationCap },
+  { id: "skills", label: "Skills", icon: Layers },
+] as const
+
+type SectionId = (typeof RESUME_TABS)[number]["id"]
+
 export function TailorView() {
   const dispatch = useAppDispatch()
   const resume = useAppSelector((state) => state.resume.resume)
@@ -211,6 +221,7 @@ export function TailorView() {
   const [showHistory, setShowHistory] = useState(false)
   const [skillEdit, setSkillEdit] = useState<SkillEdit | null>(null)
   const [skillDraft, setSkillDraft] = useState("")
+  const [activeSection, setActiveSection] = useState<SectionId>("summary")
 
   // Dummy session ID for now
   const sessionId = "session-123"
@@ -321,6 +332,29 @@ export function TailorView() {
     includesTerm(allSkills, keyword) ||
     containsToken(resumeNormalized, keyword) ||
     allSkills.some((skill) => containsToken(normalizeMatchText(keyword), skill))
+
+  // Per-tab badges (null = no count shown)
+  const sectionCounts: Record<SectionId, number | null> = {
+    summary: null,
+    experience: (resume.experiences || []).length,
+    projects: (resume.projects || []).length,
+    education: (resume.education || []).length,
+    skills: allSkills.length,
+  }
+
+  // Arrow-key navigation across the section tabs
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
+    e.preventDefault()
+    const current = RESUME_TABS.findIndex((t) => t.id === activeSection)
+    const next =
+      e.key === "ArrowRight"
+        ? (current + 1) % RESUME_TABS.length
+        : (current - 1 + RESUME_TABS.length) % RESUME_TABS.length
+    const id = RESUME_TABS[next].id
+    setActiveSection(id)
+    requestAnimationFrame(() => document.getElementById(`tab-${id}`)?.focus())
+  }
 
   // Click a missing keyword/skill in the analysis panels → add it to the
   // group it best belongs to (category name first, then related skills)
@@ -566,8 +600,52 @@ export function TailorView() {
               <span className="h-px flex-1 bg-border/70" />
             </div>
 
+            {/* Section tabs */}
+            <div
+              role="tablist"
+              aria-label="Resume sections"
+              aria-orientation="horizontal"
+              onKeyDown={handleTabKeyDown}
+              className="sticky top-0 z-10 flex gap-1.5 overflow-x-auto rounded-2xl border border-border/60 bg-card/80 p-1.5 shadow-md backdrop-blur-xl custom-scrollbar"
+            >
+              {RESUME_TABS.map((tab) => {
+                const active = activeSection === tab.id
+                const Icon = tab.icon
+                const count = sectionCounts[tab.id]
+                return (
+                  <button
+                    key={tab.id}
+                    id={`tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    aria-controls={`section-${tab.id}`}
+                    onClick={() => setActiveSection(tab.id)}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                      active
+                        ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-500/25"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" aria-hidden="true" />
+                    {tab.label}
+                    {count !== null && (
+                      <span
+                        className={`rounded-full px-1.5 py-px text-[10px] font-bold ${
+                          active ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Summary Section */}
-            <div className="relative group">
+            {activeSection === "summary" && (
+            <div className="relative group" role="tabpanel" id="section-summary" aria-labelledby="tab-summary">
               {/* Ambient background glow that activates on hover or generation */}
               <div className={`absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-15 group-hover:opacity-30 transition duration-500 ${isGenerating ? 'animate-pulse opacity-60' : ''}`}></div>
 
@@ -616,8 +694,10 @@ export function TailorView() {
               </div>
             </div>
 
+            )}
             {/* Experience Section */}
-            <div className="relative group">
+            {activeSection === "experience" && (
+            <div className="relative group" role="tabpanel" id="section-experience" aria-labelledby="tab-experience">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
 
               <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
@@ -733,14 +813,24 @@ export function TailorView() {
               </div>
             </div>
 
+            )}
             {/* Projects Section */}
-            <ProjectsSection />
+            {activeSection === "projects" && (
+            <div role="tabpanel" id="section-projects" aria-labelledby="tab-projects">
+              <ProjectsSection />
+            </div>
+            )}
 
             {/* Education Section */}
-            <EducationSection />
+            {activeSection === "education" && (
+            <div role="tabpanel" id="section-education" aria-labelledby="tab-education">
+              <EducationSection />
+            </div>
+            )}
 
             {/* Skills Section */}
-            <div className="relative group">
+            {activeSection === "skills" && (
+            <div className="relative group" role="tabpanel" id="section-skills" aria-labelledby="tab-skills">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
 
               <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
@@ -887,6 +977,7 @@ export function TailorView() {
                 )}
               </div>
             </div>
+            )}
           </div>
 
           {/* Right Column: Job Description & ATS Score */}
