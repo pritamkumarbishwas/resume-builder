@@ -437,7 +437,7 @@ export function TailorView() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto flex animate-fade-in flex-col gap-5 pt-6 pb-8 lg:h-[calc(100dvh-4rem)] lg:overflow-hidden">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-5 pt-6 pb-8 lg:h-[calc(100dvh-4rem)] lg:overflow-hidden">
       <div className="flex shrink-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Optimize Your Resume</h2>
@@ -570,7 +570,7 @@ export function TailorView() {
                     size="sm"
                     onClick={handleGenerateSummary}
                     disabled={isGenerating}
-                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25 rounded-full px-5 h-9 transition-all"
+                    className="bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 rounded-full px-5 h-9 transition-all"
                   >
                     {isGenerating ? (
                       <>
@@ -590,7 +590,7 @@ export function TailorView() {
                   <AutoResizeTextarea
                     value={resume.summary || ""}
                     onChange={(newVal) => dispatch(updateSummary(newVal))}
-                    className="w-full bg-background/50 border border-border/50 hover:bg-muted/40 focus:bg-background focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 rounded-2xl p-5 text-[15px] leading-relaxed resize-none transition-all outline-none placeholder:text-muted-foreground/70"
+                    className="w-full bg-background/50 border border-border/50 hover:bg-muted/40 focus:bg-background focus:border-primary/60 focus:ring-2 focus:ring-primary/20 rounded-2xl p-5 text-[15px] leading-relaxed resize-none transition-all outline-none placeholder:text-muted-foreground/70"
                     placeholder="Click 'Generate with AI' to let our agent craft a compelling professional summary perfectly tailored to your target role..."
                     minHeight="140px"
                   />
@@ -621,12 +621,12 @@ export function TailorView() {
                   )}
                   {(resume.experiences || []).map((exp, idx) => (
                     <div key={idx} className="border border-border/50 bg-background/40 hover:bg-background/70 rounded-2xl p-5 sm:p-6 relative overflow-hidden group/card transition-colors duration-300">
-                      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-violet-500/60 to-fuchsia-500/60 opacity-0 group-hover/card:opacity-100 transition-opacity" aria-hidden="true" />
+                      <div className="absolute left-0 top-0 h-full w-1 bg-primary/70 opacity-0 group-hover/card:opacity-100 transition-opacity" aria-hidden="true" />
                       <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
                         <div className="min-w-0">
                           <h4 className="font-bold text-base sm:text-lg text-foreground/90">{exp.title}</h4>
                           <div className="flex flex-wrap items-center text-sm text-muted-foreground gap-2 mt-1">
-                            <span className="font-medium text-violet-600 dark:text-violet-300">{exp.company}</span>
+                            <span className="font-medium text-primary">{exp.company}</span>
                             <span className="opacity-40" aria-hidden="true">•</span>
                             <span>{exp.start_date} – {exp.end_date || "Present"}</span>
                           </div>
@@ -639,13 +639,13 @@ export function TailorView() {
                             className="rounded-full border-border/60 hover:bg-background/80 shadow-sm h-8 px-3"
                             aria-label="Copy experience"
                           >
-                            {copiedExpIndex === idx ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
+                            {copiedExpIndex === idx ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleRewriteBullets(idx, exp.description)}
                             disabled={isRewriting && activeExpIndex === idx}
-                            className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-md shadow-violet-500/20 rounded-full h-8 px-3.5"
+                            className="bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 rounded-full h-8 px-3.5"
                           >
                             {isRewriting && activeExpIndex === idx ? (
                               <>
@@ -666,7 +666,7 @@ export function TailorView() {
                         {(exp.description || []).map((bullet, bIdx) => (
                           <div key={bIdx} className="flex gap-3 items-start group/bullet relative">
                             {/* Perfectly aligned, modern bullet point */}
-                            <div className="mt-[11px] w-2 h-2 rounded-full border border-fuchsia-500/50 bg-fuchsia-500/20 shrink-0 group-hover/bullet:bg-fuchsia-500 group-hover/bullet:border-fuchsia-500 group-hover/bullet:shadow-[0_0_12px_rgba(217,70,239,0.7)] group-hover/bullet:scale-125 transition-all duration-300" />
+                            <div className="mt-[11px] w-2 h-2 rounded-full border border-primary/40 bg-primary/20 shrink-0 group-hover/bullet:border-primary group-hover/bullet:bg-primary transition-colors" />
 
                             <AutoResizeTextarea
                               value={bullet}
@@ -675,7 +675,7 @@ export function TailorView() {
                                 newBullets[bIdx] = newVal
                                 dispatch(updateExperienceBullets({ index: idx, bullets: newBullets }))
                               }}
-                              className="w-full text-sm bg-transparent border border-transparent hover:bg-muted/40 focus:bg-background focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 resize-none py-2 px-3 -ml-3 rounded-lg transition-all text-foreground/90 outline-none leading-relaxed"
+                              className="w-full text-sm bg-transparent border border-transparent hover:bg-muted/40 focus:bg-background focus:border-primary/60 focus:ring-2 focus:ring-primary/20 resize-none py-2 px-3 -ml-3 rounded-lg transition-all text-foreground/90 outline-none leading-relaxed"
                             />
                             <button
                               type="button"
@@ -704,7 +704,7 @@ export function TailorView() {
                               }),
                             )
                           }
-                          className="ml-6 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                          className="ml-6 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                         >
                           <Plus className="w-3.5 h-3.5" /> Add bullet
                         </button>
@@ -774,13 +774,13 @@ export function TailorView() {
                           {skillEdit?.type === "category" && skillEdit.group === gIdx ? (
                             <input
                               {...skillInputProps("Category name")}
-                              className="w-40 rounded border border-violet-500/50 bg-background/70 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-foreground outline-none placeholder:text-muted-foreground/70"
+                              className="w-40 rounded border border-primary/50 bg-background/70 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-foreground outline-none placeholder:text-muted-foreground/70"
                             />
                           ) : (
                             <button
                               type="button"
                               onClick={() => startSkillEdit({ type: "category", group: gIdx }, group.category || "")}
-                              className="rounded text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                              className="rounded text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                               title="Rename category"
                             >
                               {group.category || "Skills"}
@@ -813,10 +813,10 @@ export function TailorView() {
                                 key={sIdx}
                                 className={`group/chip inline-flex items-center rounded-lg border transition-colors ${
                                   isEditing
-                                    ? "border-violet-500/50 bg-background/70 px-2 py-1"
+                                    ? "border-primary/50 bg-background/70 px-2 py-1"
                                     : matched
                                       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                      : "border-border/60 bg-muted/50 text-foreground/75 hover:border-violet-500/40 hover:text-foreground"
+                                      : "border-border/60 bg-muted/50 text-foreground/75 hover:border-primary/40 hover:text-foreground"
                                 }`}
                               >
                                 {isEditing ? (
@@ -847,14 +847,14 @@ export function TailorView() {
                           })}
 
                           {skillEdit?.type === "add" && skillEdit.group === gIdx ? (
-                            <span className="inline-flex items-center rounded-lg border border-violet-500/50 bg-violet-500/10 px-2 py-1">
+                            <span className="inline-flex items-center rounded-lg border border-primary/50 bg-primary/10 px-2 py-1">
                               <input {...skillInputProps("New skill")} />
                             </span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => startSkillEdit({ type: "add", group: gIdx }, "")}
-                              className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border/70 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 dark:hover:text-violet-300"
+                              className="inline-flex items-center gap-1 rounded-lg border border-dashed border-border/70 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 dark:hover:text-primary"
                             >
                               <Plus className="w-3 h-3" /> Add
                             </button>
@@ -869,7 +869,7 @@ export function TailorView() {
                         cancelSkillEdit()
                         dispatch(addSkillGroup({ category: "Skills" }))
                       }}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 dark:hover:text-violet-300"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 dark:hover:text-primary"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add skill group
                     </button>

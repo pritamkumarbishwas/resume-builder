@@ -51,7 +51,7 @@ export function EducationSection() {
               className="border border-border/50 bg-background/40 hover:bg-background/70 rounded-2xl p-5 sm:p-6 relative overflow-hidden group/card transition-colors duration-300"
             >
               <div
-                className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-fuchsia-500/60 to-violet-500/60 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                className="absolute left-0 top-0 h-full w-1 bg-primary/70 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 aria-hidden="true"
               />
 
