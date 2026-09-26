@@ -38,6 +38,14 @@ Output MUST be a valid JSON object with the following exact structure:
         "graduation_date": "2020"
       }
     ],
+    "projects": [
+      {
+        "name": "Resume Builder",
+        "description": ["Built an AI resume tailoring app"],
+        "technologies": ["React", "Python"],
+        "link": "github.com/johndoe/resume-builder"
+      }
+    ],
     "skills": [
       {
         "category": "Languages",
@@ -72,7 +80,10 @@ USER REQUEST:
     try:
         data = await llm.generate_json(_CLARIFIER_SYSTEM_PROMPT, user_prompt)
         assistant_message = data.get("assistant_message", "I have updated your resume as requested.")
-        updated_resume = Resume(**data.get("updated_resume", resume.model_dump()))
+        updated_data = data.get("updated_resume") or resume.model_dump()
+        if "projects" not in updated_data:
+            updated_data["projects"] = [p.model_dump() for p in resume.projects]
+        updated_resume = Resume(**updated_data)
         return ChatEditResponse(assistant_message=assistant_message, updated_resume=updated_resume)
     except Exception as e:
         logger.error(f"Failed to process chat edit: {e}")

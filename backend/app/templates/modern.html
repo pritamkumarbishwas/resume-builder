@@ -138,6 +138,28 @@
   </ul>
   {% endfor %}
 
+  {% if resume.projects %}
+  <h2>Projects</h2>
+  {% for proj in resume.projects %}
+  <table class="job-header">
+    <tr>
+      <td style="width: 70%; text-align: left;">
+        <span class="job-title">{{ proj.name }}</span>
+        {% if proj.technologies %}<span class="company"> — {{ proj.technologies | join(', ') }}</span>{% endif %}
+      </td>
+      <td style="width: 30%;" class="date">
+        {% if proj.link %}{{ proj.link }}{% endif %}
+      </td>
+    </tr>
+  </table>
+  <ul>
+    {% for bullet in proj.description %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  {% endif %}
+
   <h2>Education</h2>
   {% for edu in resume.education %}
   <table class="job-header">

@@ -14,6 +14,9 @@ import { ATSScorePanel } from "./ATSScorePanel"
 import { CoverLetterModal } from "./CoverLetterModal"
 import { GapAnalysisPanel } from "./GapAnalysisPanel"
 import { ChatEditorModal } from "./ChatEditorModal"
+import { ProjectsSection } from "./ProjectsSection"
+import { EducationSection } from "./EducationSection"
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery } from "@/store/api/resume-api"
 import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
 import { setResume, setJobDescription } from "@/store/slices/resume-slice"
@@ -128,29 +131,6 @@ function JobDescriptionBody({ text }: { text: string }) {
   )
 }
 
-
-function AutoResizeTextarea({ value, onChange, className, minHeight = '48px', placeholder }: { value: string, onChange: (val: string) => void, className: string, minHeight?: string, placeholder?: string }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px"
-    }
-  }, [value])
-
-  return (
-    <textarea
-      ref={textareaRef}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={className}
-      rows={1}
-      style={{ minHeight, overflow: 'hidden' }}
-      placeholder={placeholder}
-    />
-  )
-}
 
 const KEYWORD_FALLBACK_GROUP = "Skills"
 
@@ -680,14 +660,49 @@ export function TailorView() {
                               }}
                               className="w-full text-sm bg-transparent border border-transparent hover:bg-muted/40 focus:bg-background focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 resize-none py-2 px-3 -ml-3 rounded-lg transition-all text-foreground/90 outline-none leading-relaxed"
                             />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                dispatch(
+                                  updateExperienceBullets({
+                                    index: idx,
+                                    bullets: exp.description.filter((_, i) => i !== bIdx),
+                                  }),
+                                )
+                              }
+                              className="mt-1.5 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 group-hover/bullet:opacity-100"
+                              aria-label="Remove bullet"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         ))}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            dispatch(
+                              updateExperienceBullets({
+                                index: idx,
+                                bullets: [...(exp.description || []), ""],
+                              }),
+                            )
+                          }
+                          className="ml-6 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add bullet
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+
+            {/* Projects Section */}
+            <ProjectsSection />
+
+            {/* Education Section */}
+            <EducationSection />
 
             {/* Skills Section */}
             <div className="relative group">

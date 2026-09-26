@@ -22,6 +22,13 @@ export interface Skill {
   skills: string[]
 }
 
+export interface Project {
+  name: string
+  description: string[]
+  technologies: string[]
+  link?: string
+}
+
 export interface Resume {
   name: string
   email?: string
@@ -31,6 +38,7 @@ export interface Resume {
   summary: string
   experiences: Experience[]
   education: Education[]
+  projects?: Project[]
   skills: Skill[]
 }
 
@@ -77,6 +85,43 @@ const resumeSlice = createSlice({
           action.payload.bullets
       }
     },
+    updateProject(state, action: PayloadAction<{ index: number; project: Project }>) {
+      if (state.resume && state.resume.projects?.[action.payload.index]) {
+        state.resume.projects[action.payload.index] = action.payload.project
+      }
+    },
+    addProject(state) {
+      if (state.resume) {
+        if (!state.resume.projects) state.resume.projects = []
+        state.resume.projects.push({ name: "", description: [], technologies: [] })
+      }
+    },
+    removeProject(state, action: PayloadAction<{ index: number }>) {
+      if (state.resume && state.resume.projects?.[action.payload.index]) {
+        state.resume.projects.splice(action.payload.index, 1)
+      }
+    },
+    updateEducation(state, action: PayloadAction<{ index: number; education: Education }>) {
+      if (state.resume && state.resume.education[action.payload.index]) {
+        state.resume.education[action.payload.index] = action.payload.education
+      }
+    },
+    addEducation(state) {
+      if (state.resume) {
+        state.resume.education.push({
+          degree: "",
+          institution: "",
+          graduation_date: "",
+          location: "",
+          gpa: "",
+        })
+      }
+    },
+    removeEducation(state, action: PayloadAction<{ index: number }>) {
+      if (state.resume && state.resume.education[action.payload.index]) {
+        state.resume.education.splice(action.payload.index, 1)
+      }
+    },
     updateSkillGroup(state, action: PayloadAction<{ index: number; skills: string[] }>) {
       if (state.resume && state.resume.skills[action.payload.index]) {
         state.resume.skills[action.payload.index].skills = action.payload.skills
@@ -109,6 +154,12 @@ export const {
   setJobDescription,
   updateSummary,
   updateExperienceBullets,
+  updateProject,
+  addProject,
+  removeProject,
+  updateEducation,
+  addEducation,
+  removeEducation,
   updateSkillGroup,
   updateSkillCategory,
   addSkillGroup,

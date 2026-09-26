@@ -20,6 +20,12 @@ class Skill(BaseModel):
     category: str
     skills: List[str]
 
+class Project(BaseModel):
+    name: str = ""
+    description: List[str] = Field(default_factory=list, description="Bullet points describing the project")
+    technologies: List[str] = Field(default_factory=list, description="Tech stack used")
+    link: Optional[str] = None
+
 class Resume(BaseModel):
     name: str
     email: Optional[str] = None
@@ -29,4 +35,5 @@ class Resume(BaseModel):
     summary: str
     experiences: List[Experience] = Field(default_factory=list)
     education: List[Education] = Field(default_factory=list)
+    projects: List[Project] = Field(default_factory=list)
     skills: List[Skill] = Field(default_factory=list)
