@@ -1,6 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
+
+/* Class-based dark mode (matches the `.dark` class set on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* ── Base tokens (light mode default) ── */
@@ -8,7 +11,7 @@
   --color-foreground: #171717;
   --color-card: #f9fafb;
   --color-card-foreground: #171717;
-  --color-primary: #10a37f;
+  --color-primary: #7c3aed;
   --color-primary-foreground: #ffffff;
   --color-secondary: #f3f4f6;
   --color-secondary-foreground: #171717;
@@ -17,16 +20,17 @@
   --color-accent: #f3f4f6;
   --color-accent-foreground: #171717;
   --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
   --color-border: #e5e7eb;
   --color-input: #e5e7eb;
-  --color-ring: #10a37f;
+  --color-ring: #7c3aed;
   --color-sidebar: #f9fafb;
   --color-sidebar-foreground: #171717;
   --color-popover: #ffffff;
   --color-popover-foreground: #171717;
 
   /* ── Semantic tokens (light) ── */
-  --color-primary-end: #0d8c6d;
+  --color-primary-end: #6d28d9;
   --color-card-hover: #f1f5f9;
   --color-border-focus: #a3a3a3;
   --color-on-primary: #ffffff;
@@ -53,7 +57,7 @@
   --color-foreground: #e2e4e9;
   --color-card: #161b26;
   --color-card-foreground: #e2e4e9;
-  --color-primary: #10a37f;
+  --color-primary: #8b5cf6;
   --color-primary-foreground: #ffffff;
   --color-secondary: #161b26;
   --color-secondary-foreground: #e2e4e9;
@@ -62,15 +66,16 @@
   --color-accent: #161b26;
   --color-accent-foreground: #e2e4e9;
   --color-destructive: #f04e4e;
+  --color-destructive-foreground: #ffffff;
   --color-border: #252b3b;
   --color-input: #252b3b;
-  --color-ring: #10a37f;
+  --color-ring: #8b5cf6;
   --color-sidebar: #0c0f16;
   --color-sidebar-foreground: #e2e4e9;
   --color-popover: #161b26;
   --color-popover-foreground: #e2e4e9;
 
-  --color-primary-end: #0ea37a;
+  --color-primary-end: #7c3aed;
   --color-card-hover: #1c2233;
   --color-border-focus: #3d4560;
   --color-on-primary: #ffffff;
@@ -92,11 +97,16 @@ body {
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--color-primary) 22%, transparent);
 }
 
 [data-radix-popper-content-wrapper] {
@@ -117,7 +127,7 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes slideUp {
@@ -133,13 +143,41 @@ body {
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s ease-out forwards;
+  animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-muted) 20%,
+    var(--color-muted-hover) 40%,
+    var(--color-muted) 60%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.5rem;
 }
 
 /* Custom Scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -149,10 +187,25 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: var(--color-border);
   border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-muted-foreground);
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Highlight.js — Light theme ── */

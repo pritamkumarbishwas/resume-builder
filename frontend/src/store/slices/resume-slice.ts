@@ -77,6 +77,26 @@ const resumeSlice = createSlice({
           action.payload.bullets
       }
     },
+    updateSkillGroup(state, action: PayloadAction<{ index: number; skills: string[] }>) {
+      if (state.resume && state.resume.skills[action.payload.index]) {
+        state.resume.skills[action.payload.index].skills = action.payload.skills
+      }
+    },
+    updateSkillCategory(state, action: PayloadAction<{ index: number; category: string }>) {
+      if (state.resume && state.resume.skills[action.payload.index]) {
+        state.resume.skills[action.payload.index].category = action.payload.category
+      }
+    },
+    addSkillGroup(state, action: PayloadAction<{ category: string }>) {
+      if (state.resume) {
+        state.resume.skills.push({ category: action.payload.category, skills: [] })
+      }
+    },
+    removeSkillGroup(state, action: PayloadAction<{ index: number }>) {
+      if (state.resume && state.resume.skills[action.payload.index]) {
+        state.resume.skills.splice(action.payload.index, 1)
+      }
+    },
   },
 })
 
@@ -86,6 +106,10 @@ export const {
   setJobDescription,
   updateSummary,
   updateExperienceBullets,
+  updateSkillGroup,
+  updateSkillCategory,
+  addSkillGroup,
+  removeSkillGroup,
 } = resumeSlice.actions
 
 export default resumeSlice.reducer
