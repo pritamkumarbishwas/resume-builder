@@ -15,6 +15,7 @@ import { CoverLetterModal } from "./CoverLetterModal"
 import { GapAnalysisPanel } from "./GapAnalysisPanel"
 import { ChatEditorModal } from "./ChatEditorModal"
 import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery } from "@/store/api/resume-api"
+import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
 import { setResume, setJobDescription } from "@/store/slices/resume-slice"
 
 function PanelSkeleton({ label, accent = "violet" }: { label: string; accent?: "violet" | "amber" }) {
@@ -151,6 +152,8 @@ function AutoResizeTextarea({ value, onChange, className, minHeight = '48px', pl
   )
 }
 
+const KEYWORD_GROUP = "Target Keywords"
+
 type SkillEdit =
   | { type: "chip"; group: number; skill: number }
   | { type: "add"; group: number }
@@ -243,12 +246,28 @@ export function TailorView() {
   if (!resume) return null
 
   // Presentation-only helpers (derived from state already in the store)
-  const jdLower = jobDescription.toLowerCase()
-  const isSkillInJD = (skill: string) => Boolean(skill && jdLower.includes(skill.toLowerCase()))
+  const jdNormalized = normalizeMatchText(jobDescription)
+  const isSkillInJD = (skill: string) => containsToken(jdNormalized, skill)
   const allSkills = (resume.skills || []).flatMap((group) => group.skills || [])
   const matchedSkillCount = allSkills.filter(isSkillInJD).length
   const jdWordCount = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0
   const skillGroups = resume.skills || []
+
+  // Click a missing keyword/skill in the analysis panels → add it to a dedicated group
+  const handleAddKeyword = (keyword: string) => {
+    const kw = keyword.trim()
+    if (!kw || includesTerm(allSkills, kw)) return
+
+    const groupIdx = skillGroups.findIndex(
+      (g) => (g.category || "").trim().toLowerCase() === KEYWORD_GROUP.toLowerCase(),
+    )
+
+    if (groupIdx >= 0) {
+      dispatch(updateSkillGroup({ index: groupIdx, skills: [...skillGroups[groupIdx].skills, kw] }))
+    } else {
+      dispatch(addSkillGroup({ category: KEYWORD_GROUP, skills: [kw] }))
+    }
+  }
 
   // ── Skill editing ──
   const startSkillEdit = (edit: SkillEdit, initial: string) => {
@@ -792,6 +811,8 @@ export function TailorView() {
                   matchingKeywords={atsData.matching_keywords}
                   missingKeywords={atsData.missing_keywords}
                   recommendations={atsData.recommendations}
+                  skills={allSkills}
+                  onAddKeyword={handleAddKeyword}
                 />
               </div>
             ) : null}
@@ -814,6 +835,8 @@ export function TailorView() {
                   missingPreferred={gapData.missing_preferred}
                   relevantExperiences={gapData.relevant_experiences}
                   recommendations={gapData.recommendations}
+                  skills={allSkills}
+                  onAddKeyword={handleAddKeyword}
                 />
               </div>
             ) : null}

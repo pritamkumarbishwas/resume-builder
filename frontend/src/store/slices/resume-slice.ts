@@ -87,9 +87,12 @@ const resumeSlice = createSlice({
         state.resume.skills[action.payload.index].category = action.payload.category
       }
     },
-    addSkillGroup(state, action: PayloadAction<{ category: string }>) {
+    addSkillGroup(state, action: PayloadAction<{ category: string; skills?: string[] }>) {
       if (state.resume) {
-        state.resume.skills.push({ category: action.payload.category, skills: [] })
+        state.resume.skills.push({
+          category: action.payload.category,
+          skills: action.payload.skills ?? [],
+        })
       }
     },
     removeSkillGroup(state, action: PayloadAction<{ index: number }>) {

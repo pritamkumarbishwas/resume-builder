@@ -1,13 +1,23 @@
-import { CheckCircle2, XCircle, Lightbulb } from "lucide-react"
+import { CheckCircle2, XCircle, Lightbulb, Plus, Check } from "lucide-react"
+import { includesTerm } from "@/lib/utils"
 
 interface ATSScorePanelProps {
   score: number;
   matchingKeywords: string[];
   missingKeywords: string[];
   recommendations: string[];
+  skills?: string[];
+  onAddKeyword?: (keyword: string) => void;
 }
 
-export function ATSScorePanel({ score, matchingKeywords, missingKeywords, recommendations }: ATSScorePanelProps) {
+export function ATSScorePanel({
+  score,
+  matchingKeywords,
+  missingKeywords,
+  recommendations,
+  skills = [],
+  onAddKeyword,
+}: ATSScorePanelProps) {
   // Determine color based on score
   const getScoreColor = (s: number) => {
     if (s >= 80) return "text-emerald-500"
@@ -72,18 +82,42 @@ export function ATSScorePanel({ score, matchingKeywords, missingKeywords, recomm
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Missing Keywords */}
         <div className="space-y-2.5">
-          <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-rose-500">
-            <XCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Keywords
-            <span className="ml-1.5 rounded-full bg-rose-500/10 px-1.5 py-px text-[10px] font-bold text-rose-500">
-              {missingKeywords.length}
-            </span>
-          </h4>
-          <div className="flex flex-wrap gap-1.5">
-            {missingKeywords.length > 0 ? missingKeywords.map((kw, i) => (
-              <span key={i} className="px-2 py-1 text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg">
-                {kw}
+          <div>
+            <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-rose-500">
+              <XCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Keywords
+              <span className="ml-1.5 rounded-full bg-rose-500/10 px-1.5 py-px text-[10px] font-bold text-rose-500">
+                {missingKeywords.filter((kw) => !includesTerm(skills, kw)).length}
               </span>
-            )) : (
+            </h4>
+            {onAddKeyword && missingKeywords.length > 0 && (
+              <p className="mt-1 text-[11px] text-muted-foreground">Click a keyword to add it to Skills</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {missingKeywords.length > 0 ? missingKeywords.map((kw, i) => {
+              const added = includesTerm(skills, kw)
+              return added ? (
+                <span
+                  key={i}
+                  title="Already in your skills"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg"
+                >
+                  <Check className="w-3 h-3" aria-hidden="true" />
+                  {kw}
+                </span>
+              ) : (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onAddKeyword?.(kw)}
+                  title={`Add "${kw}" to Skills`}
+                  className="group/kw inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg transition-colors hover:border-rose-500/50 hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  {kw}
+                  <Plus className="w-3 h-3 opacity-50 transition-opacity group-hover/kw:opacity-100" aria-hidden="true" />
+                </button>
+              )
+            }) : (
               <span className="inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                 <CheckCircle2 className="w-4 h-4" /> Nothing missing!
               </span>

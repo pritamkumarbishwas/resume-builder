@@ -1,4 +1,5 @@
-import { CheckCircle2, AlertCircle, XCircle, Target } from "lucide-react"
+import { CheckCircle2, AlertCircle, XCircle, Target, Plus, Check } from "lucide-react"
+import { includesTerm } from "@/lib/utils"
 
 interface SkillMatch {
   skill: string
@@ -13,6 +14,57 @@ interface GapAnalysisPanelProps {
   missingPreferred: string[]
   relevantExperiences: string[]
   recommendations: string[]
+  skills?: string[]
+  onAddKeyword?: (keyword: string) => void
+}
+
+function MissingChip({
+  keyword,
+  added,
+  onAdd,
+  tone,
+}: {
+  keyword: string
+  added: boolean
+  onAdd?: (keyword: string) => void
+  tone: "rose" | "amber"
+}) {
+  if (added) {
+    return (
+      <span
+        title="Already in your skills"
+        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-lg"
+      >
+        <Check className="w-3 h-3" aria-hidden="true" />
+        {keyword}
+      </span>
+    )
+  }
+
+  const palette =
+    tone === "rose"
+      ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-500/15"
+      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:border-amber-500/50 hover:bg-amber-500/15"
+
+  if (!onAdd) {
+    return (
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium border rounded-lg ${palette}`}>
+        {keyword}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(keyword)}
+      title={`Add "${keyword}" to Skills`}
+      className={`group/kw inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${palette}`}
+    >
+      {keyword}
+      <Plus className="w-3 h-3 opacity-50 transition-opacity group-hover/kw:opacity-100" aria-hidden="true" />
+    </button>
+  )
 }
 
 export function GapAnalysisPanel({
@@ -21,6 +73,8 @@ export function GapAnalysisPanel({
   missingRequired,
   missingPreferred,
   recommendations,
+  skills = [],
+  onAddKeyword,
 }: GapAnalysisPanelProps) {
   return (
     <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-5 sm:p-6 flex flex-col relative overflow-hidden h-full">
@@ -56,17 +110,26 @@ export function GapAnalysisPanel({
         {/* Missing Required Skills */}
         {missingRequired.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-rose-500">
-              <XCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Required Skills
-              <span className="ml-1.5 rounded-full bg-rose-500/10 px-1.5 py-px text-[10px] font-bold text-rose-500">
-                {missingRequired.length}
-              </span>
-            </h4>
+            <div>
+              <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-rose-500">
+                <XCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Required Skills
+                <span className="ml-1.5 rounded-full bg-rose-500/10 px-1.5 py-px text-[10px] font-bold text-rose-500">
+                  {missingRequired.filter((kw) => !includesTerm(skills, kw)).length}
+                </span>
+              </h4>
+              {onAddKeyword && (
+                <p className="mt-1 text-[11px] text-muted-foreground">Click a skill to add it to your Skills</p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {missingRequired.map((kw, i) => (
-                <span key={i} className="px-2 py-1 text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg">
-                  {kw}
-                </span>
+                <MissingChip
+                  key={i}
+                  keyword={kw}
+                  added={includesTerm(skills, kw)}
+                  onAdd={onAddKeyword}
+                  tone="rose"
+                />
               ))}
             </div>
           </div>
@@ -75,17 +138,23 @@ export function GapAnalysisPanel({
         {/* Missing Preferred Skills */}
         {missingPreferred.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-amber-500">
-              <AlertCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Preferred Skills
-              <span className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-px text-[10px] font-bold text-amber-500">
-                {missingPreferred.length}
-              </span>
-            </h4>
+            <div>
+              <h4 className="font-semibold text-xs uppercase tracking-wider flex items-center text-amber-500">
+                <AlertCircle className="w-3.5 h-3.5 mr-1.5" /> Missing Preferred Skills
+                <span className="ml-1.5 rounded-full bg-amber-500/10 px-1.5 py-px text-[10px] font-bold text-amber-500">
+                  {missingPreferred.filter((kw) => !includesTerm(skills, kw)).length}
+                </span>
+              </h4>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {missingPreferred.map((kw, i) => (
-                <span key={i} className="px-2 py-1 text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg">
-                  {kw}
-                </span>
+                <MissingChip
+                  key={i}
+                  keyword={kw}
+                  added={includesTerm(skills, kw)}
+                  onAdd={onAddKeyword}
+                  tone="amber"
+                />
               ))}
             </div>
           </div>
