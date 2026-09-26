@@ -42,6 +42,25 @@ function PanelSkeleton({ label }: { label: string }) {
 
 const KEYWORD_FALLBACK_GROUP = "Skills"
 
+/**
+ * Keeps the selected tab visible inside the horizontally scrolling strip by
+ * adjusting only the strip's scrollLeft — never the page's scroll position.
+ */
+function revealTab(id: string) {
+  requestAnimationFrame(() => {
+    const btn = document.getElementById(`tab-${id}`)
+    const strip = btn?.parentElement
+    if (!btn || !strip) return
+    const btnRect = btn.getBoundingClientRect()
+    const stripRect = strip.getBoundingClientRect()
+    if (btnRect.left < stripRect.left) {
+      strip.scrollLeft -= stripRect.left - btnRect.left
+    } else if (btnRect.right > stripRect.right) {
+      strip.scrollLeft += btnRect.right - stripRect.right
+    }
+  })
+}
+
 type SkillGroupLike = { category: string; skills: string[] }
 
 function tokenize(text: string): string[] {
@@ -269,6 +288,7 @@ export function TailorView() {
     const id = RESUME_TABS[next].id
     setActiveSection(id)
     requestAnimationFrame(() => document.getElementById(`tab-${id}`)?.focus())
+    revealTab(id)
   }
 
   // Click a missing keyword/skill in the analysis panels → add it to the
@@ -513,7 +533,7 @@ export function TailorView() {
               aria-label="Resume sections"
               aria-orientation="horizontal"
               onKeyDown={handleTabKeyDown}
-              className="sticky top-16 z-20 flex gap-1.5 overflow-x-auto rounded-2xl border border-border/60 bg-card/95 p-1.5 shadow-sm backdrop-blur-xl custom-scrollbar lg:top-0"
+              className="sticky top-16 z-20 flex min-h-[50px] items-center gap-1.5 overflow-x-auto rounded-2xl border border-border/60 bg-card/95 p-1.5 shadow-sm backdrop-blur-xl no-scrollbar lg:top-0"
             >
               {RESUME_TABS.map((tab) => {
                 const active = activeSection === tab.id
@@ -527,8 +547,11 @@ export function TailorView() {
                     role="tab"
                     aria-selected={active}
                     aria-controls={`section-${tab.id}`}
-                    onClick={() => setActiveSection(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                    onClick={() => {
+                      setActiveSection(tab.id)
+                      revealTab(tab.id)
+                    }}
+                    className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                       active
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"

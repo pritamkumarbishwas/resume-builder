@@ -195,6 +195,17 @@ body {
   background-color: var(--color-muted-foreground);
 }
 
+/* Scrollable strips (section tabs) — scrolling stays available, but the
+   scrollbar must not steal height from the row it belongs to */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Respect user motion preferences */
 @media (prefers-reduced-motion: reduce) {
 
