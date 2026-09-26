@@ -9,24 +9,26 @@ import {
 import { API_BASE_URL } from "@/store/api/resume-api"
 import { updateExperienceBullets, updateSummary, updateSkillGroup, updateSkillCategory, addSkillGroup, removeSkillGroup } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, Target, X, Plus, FolderGit2, GraduationCap } from "lucide-react"
+import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
+import { ScoreBreakdownCard } from "./ScoreBreakdownCard"
 import { CoverLetterModal } from "./CoverLetterModal"
 import { GapAnalysisPanel } from "./GapAnalysisPanel"
 import { ChatEditorModal } from "./ChatEditorModal"
+import { JobDescriptionCard } from "./JobDescriptionCard"
 import { ProjectsSection } from "./ProjectsSection"
 import { EducationSection } from "./EducationSection"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery } from "@/store/api/resume-api"
 import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
+import { computeScoreBreakdown } from "@/lib/score-breakdown"
 import { setResume, setJobDescription } from "@/store/slices/resume-slice"
 
-function PanelSkeleton({ label, accent = "violet" }: { label: string; accent?: "violet" | "amber" }) {
-  const spin = accent === "amber" ? "border-amber-500/40 border-t-amber-500" : "border-violet-500/40 border-t-violet-500"
+function PanelSkeleton({ label }: { label: string }) {
   return (
-    <div className="bg-card/60 backdrop-blur-xl border border-border/70 shadow-xl rounded-2xl p-6 h-full">
-      <div className="flex items-center gap-2.5 mb-5">
-        <div className={`w-5 h-5 border-2 rounded-full animate-spin ${spin}`} />
+    <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
+      <div className="mb-5 flex items-center gap-2.5">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/40 border-t-primary" />
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
       </div>
       <div className="space-y-3">
@@ -37,100 +39,6 @@ function PanelSkeleton({ label, accent = "violet" }: { label: string; accent?: "
     </div>
   )
 }
-
-type JDBlock =
-  | { kind: "heading"; text: string }
-  | { kind: "bullets"; items: string[] }
-  | { kind: "para"; text: string }
-
-function parseJobDescription(text: string): JDBlock[] {
-  const blocks: JDBlock[] = []
-  let para: string[] = []
-
-  const flush = () => {
-    if (para.length > 0) {
-      blocks.push({ kind: "para", text: para.join(" ") })
-      para = []
-    }
-  }
-
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim()
-    if (!line) {
-      flush()
-      continue
-    }
-
-    const isBullet = /^[•·\-–*]\s+/.test(line) || /^\d+[.)]\s+/.test(line)
-    const isHeading =
-      (line.length <= 60 && line.endsWith(":")) ||
-      (line.length <= 45 && line === line.toUpperCase() && /[A-Z]/.test(line))
-
-    if (isBullet) {
-      flush()
-      const clean = line.replace(/^(?:[•·\-–*]|\d+[.)])\s*/, "")
-      const last = blocks[blocks.length - 1]
-      if (last && last.kind === "bullets") last.items.push(clean)
-      else blocks.push({ kind: "bullets", items: [clean] })
-      continue
-    }
-
-    if (isHeading) {
-      flush()
-      blocks.push({ kind: "heading", text: line.replace(/:$/, "") })
-      continue
-    }
-
-    para.push(line)
-  }
-
-  flush()
-  return blocks
-}
-
-function JobDescriptionBody({ text }: { text: string }) {
-  const blocks = parseJobDescription(text)
-
-  if (blocks.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground text-center py-6 border border-dashed border-border/70 rounded-xl">
-        No job description added yet.
-      </p>
-    )
-  }
-
-  return (
-    <div className="space-y-3">
-      {blocks.map((block, i) => {
-        if (block.kind === "heading") {
-          return (
-            <h4 key={i} className="pt-1 text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-300">
-              {block.text}
-            </h4>
-          )
-        }
-        if (block.kind === "bullets") {
-          return (
-            <ul key={i} className="space-y-1.5">
-              {block.items.map((item, j) => (
-                <li key={j} className="flex gap-2.5 text-[13px] leading-relaxed text-foreground/85">
-                  <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-violet-500/60" aria-hidden="true" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-        return (
-          <p key={i} className="text-[13px] leading-relaxed text-muted-foreground">
-            {block.text}
-          </p>
-        )
-      })}
-    </div>
-  )
-}
-
 
 const KEYWORD_FALLBACK_GROUP = "Skills"
 
@@ -313,7 +221,6 @@ export function TailorView() {
   // One source of truth for the "N matched" badge and the ATS panel
   const matchedSkills = allSkills.filter(isSkillInJD)
   const matchedSkillCount = matchedSkills.length
-  const jdWordCount = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0
 
   // Everything the resume actually mentions — used to drop false "missing" keywords
   const resumeNormalized = normalizeMatchText(
@@ -332,6 +239,14 @@ export function TailorView() {
     includesTerm(allSkills, keyword) ||
     containsToken(resumeNormalized, keyword) ||
     allSkills.some((skill) => containsToken(normalizeMatchText(keyword), skill))
+
+  // Keywords the JD wants but the resume never mentions (the same set the ATS panel reports)
+  const missingKeywords: string[] = ((atsData?.missing_keywords || []) as string[]).filter(
+    (kw) => !isPresentInResume(kw)
+  )
+
+  // Score breakdown derived from existing data — no extra API round-trip
+  const breakdown = computeScoreBreakdown(resume, matchedSkillCount, missingKeywords.length)
 
   // Per-tab badges (null = no count shown)
   const sectionCounts: Record<SectionId, number | null> = {
@@ -522,8 +437,8 @@ export function TailorView() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto pt-6 pb-8 animate-fade-in flex flex-col h-[calc(100dvh-9rem)] min-h-[620px]">
-      <div className="flex flex-col gap-4 mb-5 shrink-0 xl:flex-row xl:items-center xl:justify-between">
+    <div className="w-full max-w-7xl mx-auto flex animate-fade-in flex-col gap-5 pt-6 pb-8 lg:h-[calc(100dvh-4rem)] lg:overflow-hidden">
+      <div className="flex shrink-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Optimize Your Resume</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
@@ -532,123 +447,73 @@ export function TailorView() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            size="lg"
+            size="sm"
             variant="outline"
             onClick={() => setShowHistory(!showHistory)}
-            className={`rounded-full px-5 shadow-sm ${
+            aria-expanded={showHistory}
+            className={`rounded-full px-3.5 ${
               showHistory
-                ? "border-violet-500/50 bg-violet-500/10 text-violet-600 dark:text-violet-300"
+                ? "border-primary/50 bg-primary/10 text-primary"
                 : "border-border/70 text-foreground/80 hover:bg-muted/60"
             }`}
           >
-            <History className="w-4 h-4 mr-2" />
+            <History className="mr-1.5 h-3.5 w-3.5" />
             History
           </Button>
           <Button
-            size="lg"
+            size="sm"
             variant="outline"
             onClick={handleSaveVersion}
-            className="rounded-full px-5 shadow-sm border-border/70 text-foreground/80 hover:bg-muted/60"
+            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="mr-1.5 h-3.5 w-3.5" />
             Save Version
           </Button>
           <Button
-            size="lg"
+            size="sm"
             variant="outline"
             onClick={() => setShowChatEditor(true)}
-            className="rounded-full px-5 shadow-sm border-violet-500/40 text-violet-600 hover:bg-violet-500/10 dark:text-violet-300"
+            className="rounded-full border-primary/40 px-3.5 text-primary hover:bg-primary/10"
           >
-            <Sparkles className="w-4 h-4 mr-2" /> Chat Edit
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Chat Edit
           </Button>
           <Button
-            size="lg"
+            size="sm"
             variant="outline"
             onClick={() => setShowCoverLetter(true)}
-            className="rounded-full px-5 shadow-sm border-border/70 text-foreground/80 hover:bg-muted/60"
+            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
-            <FileText className="w-4 h-4 mr-2" /> Cover Letter
+            <FileText className="mr-1.5 h-3.5 w-3.5" /> Cover Letter
           </Button>
           <Button
-            size="lg"
+            size="sm"
             variant="outline"
             onClick={() => handleExport("classic")}
-            className="rounded-full px-5 shadow-sm border-border/70 text-foreground/80 hover:bg-muted/60"
+            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
-            <Download className="w-4 h-4 mr-2" /> Classic PDF
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Classic PDF
           </Button>
           <Button
-            size="lg"
+            size="sm"
             onClick={() => handleExport("modern")}
-            className="rounded-full px-5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all"
+            className="rounded-full bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90"
           >
-            <Download className="w-4 h-4 mr-2" /> Modern PDF
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Modern PDF
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-4 lg:gap-6">
-        {/* Main Workspace (Takes full width unless history is open) */}
-        <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0 pb-6 md:pb-0 overflow-y-auto md:overflow-hidden custom-scrollbar transition-all duration-300 ${showHistory ? 'hidden md:grid' : ''}`}>
-
-          {/* Left Column: Live Analysis + Parsed Data Edit Area */}
-          <div className="md:col-span-2 space-y-6 md:overflow-y-auto md:pr-2 md:pb-6 custom-scrollbar">
-            <div className="flex items-center gap-3" aria-hidden="true">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Live analysis
-              </span>
-              <span className="h-px flex-1 bg-border/70" />
-            </div>
-
-            {/* Analysis panels — full width, ATS first then Gap */}
-            <div className="flex flex-col gap-6">
-              {/* ATS Score Panel */}
-              {isScoring && !atsData ? (
-                <PanelSkeleton label="Analyzing ATS compatibility..." />
-              ) : atsData ? (
-                <ATSScorePanel
-                  score={atsData.score}
-                  matchingKeywords={matchedSkills}
-                  missingKeywords={(atsData.missing_keywords || []).filter((kw: string) => !isPresentInResume(kw))}
-                  recommendations={atsData.recommendations}
-                  skills={allSkills}
-                  onAddKeyword={handleAddKeyword}
-                  updating={isScoring}
-                />
-              ) : null}
-
-              {/* Gap Analysis Panel */}
-              {isGapLoading && !gapData ? (
-                <PanelSkeleton label="Running gap analysis..." accent="amber" />
-              ) : gapData ? (
-                <GapAnalysisPanel
-                  overallMatchPercent={gapData.overall_match_percent}
-                  matchedSkills={gapData.matched_skills}
-                  missingRequired={gapData.missing_required}
-                  missingPreferred={gapData.missing_preferred}
-                  relevantExperiences={gapData.relevant_experiences}
-                  recommendations={gapData.recommendations}
-                  skills={allSkills}
-                  onAddKeyword={handleAddKeyword}
-                  updating={isGapLoading}
-                />
-              ) : null}
-            </div>
-
-            <div className="flex items-center gap-3" aria-hidden="true">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                Your resume · edit anything
-              </span>
-              <span className="h-px flex-1 bg-border/70" />
-            </div>
-
-            {/* Section tabs */}
+      {/* Two-column workspace — left: resume content, right: ATS insights */}
+      <div className="grid min-h-0 flex-1 gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:grid-rows-[minmax(0,1fr)] xl:gap-6">
+        {/* Left column: resume */}
+        <div className="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1 lg:pb-2 custom-scrollbar">
+          {/* Section tabs */}
             <div
               role="tablist"
               aria-label="Resume sections"
               aria-orientation="horizontal"
               onKeyDown={handleTabKeyDown}
-              className="sticky top-0 z-10 flex gap-1.5 overflow-x-auto rounded-2xl border border-border/60 bg-card/80 p-1.5 shadow-md backdrop-blur-xl custom-scrollbar"
+              className="sticky top-16 z-20 flex gap-1.5 overflow-x-auto rounded-2xl border border-border/60 bg-card/95 p-1.5 shadow-sm backdrop-blur-xl custom-scrollbar lg:top-0"
             >
               {RESUME_TABS.map((tab) => {
                 const active = activeSection === tab.id
@@ -663,9 +528,9 @@ export function TailorView() {
                     aria-selected={active}
                     aria-controls={`section-${tab.id}`}
                     onClick={() => setActiveSection(tab.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${
                       active
-                        ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-500/25"
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                     }`}
                   >
@@ -687,15 +552,12 @@ export function TailorView() {
 
             {/* Summary Section */}
             {activeSection === "summary" && (
-            <div className="relative group" role="tabpanel" id="section-summary" aria-labelledby="tab-summary">
-              {/* Ambient background glow that activates on hover or generation */}
-              <div className={`absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-15 group-hover:opacity-30 transition duration-500 ${isGenerating ? 'animate-pulse opacity-60' : ''}`}></div>
-
-              <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div role="tabpanel" id="section-summary" aria-labelledby="tab-summary">
+              <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center border border-violet-500/25">
-                      <Sparkles className="w-4 h-4 text-violet-500" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                      <Sparkles className="h-4 w-4 text-primary" />
                     </div>
                     <div className="leading-tight">
                       <h3 className="text-lg font-bold">Executive Summary</h3>
@@ -739,13 +601,11 @@ export function TailorView() {
             )}
             {/* Experience Section */}
             {activeSection === "experience" && (
-            <div className="relative group" role="tabpanel" id="section-experience" aria-labelledby="tab-experience">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-
-              <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500/20 to-violet-500/20 flex items-center justify-center border border-fuchsia-500/25">
-                    <Briefcase className="w-4 h-4 text-fuchsia-500" />
+            <div role="tabpanel" id="section-experience" aria-labelledby="tab-experience">
+              <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                    <Briefcase className="h-4 w-4 text-primary" />
                   </div>
                   <div className="leading-tight">
                     <h3 className="text-lg font-bold">Work Experience</h3>
@@ -872,14 +732,12 @@ export function TailorView() {
 
             {/* Skills Section */}
             {activeSection === "skills" && (
-            <div className="relative group" role="tabpanel" id="section-skills" aria-labelledby="tab-skills">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-
-              <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <div role="tabpanel" id="section-skills" aria-labelledby="tab-skills">
+              <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-violet-500/20 flex items-center justify-center border border-emerald-500/25">
-                      <Layers className="w-4 h-4 text-emerald-500" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                      <Layers className="h-4 w-4 text-primary" />
                     </div>
                     <div className="leading-tight">
                       <h3 className="text-lg font-bold">Skills</h3>
@@ -1022,89 +880,127 @@ export function TailorView() {
             )}
           </div>
 
-          {/* Right Column: Job Description */}
-          <div className="flex flex-col gap-6 md:overflow-y-auto md:pb-6 custom-scrollbar">
-            <div className="relative flex flex-col min-h-[220px] flex-1 overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-lg backdrop-blur-xl">
-              <div className="flex items-start justify-between gap-3 border-b border-border/60 p-4 sm:p-5 shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 shrink-0 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
-                    <Target className="w-4 h-4 text-emerald-500" />
-                  </div>
-                  <div className="leading-tight min-w-0">
-                    <h3 className="font-semibold text-base">Target Job</h3>
-                    <p className="text-xs text-muted-foreground truncate">What we optimize against</p>
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                  {jdWordCount} {jdWordCount === 1 ? "word" : "words"}
-                </span>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-8 custom-scrollbar">
-                <JobDescriptionBody text={jobDescription} />
-              </div>
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-card to-transparent"
-                aria-hidden="true"
-              />
-            </div>
-          </div>
+          {/* Right column: ATS insights */}
+          <div className="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto lg:pl-1 lg:pb-2 custom-scrollbar">
+            <JobDescriptionCard text={jobDescription} />
 
+            {/* ATS score — the headline metric */}
+            {isScoring && !atsData ? (
+              <PanelSkeleton label="Analyzing ATS compatibility..." />
+            ) : atsData ? (
+              <ATSScorePanel score={atsData.score} updating={isScoring} />
+            ) : null}
+
+            {/* Score breakdown */}
+            {atsData ? (
+              <ScoreBreakdownCard
+                breakdown={breakdown}
+                matchingKeywords={matchedSkills}
+                missingKeywords={missingKeywords}
+                recommendations={atsData.recommendations}
+                skills={allSkills}
+                onAddKeyword={handleAddKeyword}
+              />
+            ) : null}
+
+            {/* Skill gap analysis */}
+            {isGapLoading && !gapData ? (
+              <PanelSkeleton label="Running gap analysis..." />
+            ) : gapData ? (
+              <GapAnalysisPanel
+                overallMatchPercent={gapData.overall_match_percent}
+                matchedSkills={gapData.matched_skills}
+                missingRequired={gapData.missing_required}
+                missingPreferred={gapData.missing_preferred}
+                relevantExperiences={gapData.relevant_experiences}
+                recommendations={gapData.recommendations}
+                skills={allSkills}
+                onAddKeyword={handleAddKeyword}
+                updating={isGapLoading}
+              />
+            ) : null}
+          </div>
         </div>
 
-        {/* History Sidebar */}
+        {/* Version history — overlay drawer */}
         {showHistory && (
-          <aside className="w-80 shrink-0 bg-card/80 backdrop-blur-xl border border-border/60 shadow-xl rounded-2xl p-5 flex flex-col animate-fade-in">
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-violet-500" />
-                <h3 className="font-bold text-base">Version History</h3>
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm"
+              onClick={() => setShowHistory(false)}
+              aria-hidden="true"
+            />
+            <aside
+              aria-label="Version history"
+              className="fixed inset-y-0 right-0 z-50 flex w-80 max-w-[85vw] animate-fade-in flex-col border-l border-border/60 bg-card p-5 shadow-xl"
+            >
+              <div className="mb-4 flex shrink-0 items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  <h3 className="text-base font-bold">Version History</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  {versions && versions.length > 0 && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      {versions.length}
+                    </span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowHistory(false)}
+                    aria-label="Close version history"
+                    className="rounded-full px-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              {versions && versions.length > 0 && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  {versions.length}
-                </span>
-              )}
-            </div>
-            <div className="overflow-y-auto custom-scrollbar -mr-2 pr-2">
-              {!versions || versions.length === 0 ? (
-                <div className="text-center py-8 px-2">
-                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">No versions saved yet.</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Save a version to compare different tailoring passes.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {versions.map((v: any) => (
-                    <div key={v.version_id} className="p-4 bg-background/60 rounded-xl border border-border/60 hover:border-violet-500/40 hover:bg-background/80 transition-colors group">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-semibold text-sm leading-snug">{v.label}</h4>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleLoadVersion(v)}
-                          className="h-6 px-2 text-xs shrink-0 rounded-full opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                        >
-                          Restore
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center mt-2.5">
-                        <span className="text-xs text-muted-foreground">{new Date(v.created_at).toLocaleDateString()}</span>
-                        <span className="text-xs font-bold rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5">
-                          ATS {v.ats_score}%
-                        </span>
-                      </div>
+              <div className="custom-scrollbar -mr-2 overflow-y-auto pr-2">
+                {!versions || versions.length === 0 ? (
+                  <div className="px-2 py-8 text-center">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </aside>
+                    <p className="text-sm text-muted-foreground">No versions saved yet.</p>
+                    <p className="mt-1 text-xs text-muted-foreground/70">
+                      Save a version to compare different tailoring passes.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {versions.map((v: any) => (
+                      <div
+                        key={v.version_id}
+                        className="group rounded-xl border border-border/60 bg-background/60 p-4 transition-colors hover:border-primary/40 hover:bg-background/80"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-sm font-semibold leading-snug">{v.label}</h4>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleLoadVersion(v)}
+                            className="h-6 shrink-0 rounded-full px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                          >
+                            Restore
+                          </Button>
+                        </div>
+                        <div className="mt-2.5 flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(v.created_at).toLocaleDateString()}
+                          </span>
+                          <span className="rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            ATS {v.ats_score}%
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </aside>
+          </>
         )}
-      </div>
 
       <CoverLetterModal
         isOpen={showCoverLetter}

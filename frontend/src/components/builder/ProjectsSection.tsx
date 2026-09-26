@@ -43,14 +43,12 @@ export function ProjectsSection() {
   }
 
   return (
-    <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-
-      <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
+    <div className="group">
+      <div className="relative rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 flex items-center justify-center border border-violet-500/25">
-              <FolderGit2 className="w-4 h-4 text-violet-500" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+              <FolderGit2 className="h-4 w-4 text-primary" />
             </div>
             <div className="leading-tight">
               <h3 className="text-lg font-bold">Projects</h3>
@@ -80,7 +78,7 @@ export function ProjectsSection() {
               className="border border-border/50 bg-background/40 hover:bg-background/70 rounded-2xl p-5 sm:p-6 relative overflow-hidden group/card transition-colors duration-300"
             >
               <div
-                className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-violet-500/60 to-fuchsia-500/60 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                className="absolute left-0 top-0 h-full w-1 bg-primary/70 opacity-0 group-hover/card:opacity-100 transition-opacity"
                 aria-hidden="true"
               />
 
@@ -122,13 +120,13 @@ export function ProjectsSection() {
                 {(project.description || []).map((bullet, bIdx) => (
                   <div key={bIdx} className="flex gap-3 items-start group/bullet">
                     <div
-                      className="mt-[11px] w-2 h-2 rounded-full border border-violet-500/50 bg-violet-500/20 shrink-0 group-hover/bullet:bg-violet-500 group-hover/bullet:border-violet-500 group-hover/bullet:shadow-[0_0_12px_rgba(139,92,246,0.7)] transition-all duration-300"
+                      className="mt-[11px] h-2 w-2 shrink-0 rounded-full border border-primary/40 bg-primary/20 transition-colors group-hover/bullet:border-primary group-hover/bullet:bg-primary"
                       aria-hidden="true"
                     />
                     <AutoResizeTextarea
                       value={bullet}
                       onChange={(v) => setBullet(idx, bIdx, v)}
-                      className="w-full text-sm bg-transparent border border-transparent hover:bg-muted/40 focus:bg-background focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/20 resize-none py-2 px-3 -ml-3 rounded-lg transition-all text-foreground/90 outline-none leading-relaxed"
+                      className="w-full text-sm bg-transparent border border-transparent hover:bg-muted/40 focus:bg-background focus:border-primary/60 focus:ring-2 focus:ring-primary/20 resize-none py-2 px-3 -ml-3 rounded-lg transition-all text-foreground/90 outline-none leading-relaxed"
                       placeholder="What did you build, and what was the impact?"
                     />
                     <button
@@ -144,7 +142,7 @@ export function ProjectsSection() {
                 <button
                   type="button"
                   onClick={() => addBullet(idx)}
-                  className="ml-6 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  className="ml-6 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add bullet
                 </button>
@@ -156,7 +154,7 @@ export function ProjectsSection() {
             <button
               type="button"
               onClick={() => dispatch(addProject())}
-              className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <Plus className="w-3.5 h-3.5" /> Add project
             </button>

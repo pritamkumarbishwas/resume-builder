@@ -16,14 +16,12 @@ export function EducationSection() {
   }
 
   return (
-    <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
-
-      <div className="relative bg-card/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-xl">
+    <div className="group">
+      <div className="relative rounded-2xl border border-border/60 bg-card p-5 sm:p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500/20 to-violet-500/20 flex items-center justify-center border border-fuchsia-500/25">
-              <GraduationCap className="w-4 h-4 text-fuchsia-500" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+              <GraduationCap className="h-4 w-4 text-primary" />
             </div>
             <div className="leading-tight">
               <h3 className="text-lg font-bold">Education</h3>
@@ -108,7 +106,7 @@ export function EducationSection() {
             <button
               type="button"
               onClick={() => dispatch(addEducation())}
-              className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-500/50 hover:text-violet-600 dark:hover:text-violet-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+              className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border/70 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             >
               <Plus className="w-3.5 h-3.5" /> Add education
             </button>
