@@ -152,7 +152,61 @@ function AutoResizeTextarea({ value, onChange, className, minHeight = '48px', pl
   )
 }
 
-const KEYWORD_GROUP = "Target Keywords"
+const KEYWORD_FALLBACK_GROUP = "Skills"
+
+type SkillGroupLike = { category: string; skills: string[] }
+
+function tokenize(text: string): string[] {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}+#]+/gu, " ").split(" ").filter(Boolean)
+}
+
+const stemOf = (token: string) => (token.length > 4 ? token.slice(0, 4) : token)
+
+function tokensRelated(a: string, b: string): boolean {
+  if (a === b) return true
+  if (a.length >= 3 && b.length >= 3 && (a.startsWith(b) || b.startsWith(a))) return true
+  return stemOf(a) === stemOf(b)
+}
+
+/**
+ * Chooses the group a keyword most likely belongs to:
+ * category-name matches count the most, then overlap with existing skills,
+ * falling back to the first group when nothing is related.
+ * Returns -1 when the resume has no groups at all.
+ */
+function bestSkillGroupIndex(groups: SkillGroupLike[], keyword: string): number {
+  if (groups.length === 0) return -1
+
+  const kwTokens = tokenize(keyword)
+  if (kwTokens.length === 0) return 0
+
+  let bestIdx = 0
+  let bestScore = 0
+
+  groups.forEach((group, i) => {
+    const catTokens = tokenize(group.category || "")
+    const skillTokens = (group.skills || []).flatMap(tokenize)
+    let score = 0
+
+    for (const kw of kwTokens) {
+      for (const cat of catTokens) {
+        if (kw === cat) score += 5
+        else if (tokensRelated(kw, cat)) score += 3
+      }
+      for (const skill of skillTokens) {
+        if (kw === skill) score += 2
+        else if (tokensRelated(kw, skill)) score += 1
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score
+      bestIdx = i
+    }
+  })
+
+  return bestScore > 0 ? bestIdx : 0
+}
 
 type SkillEdit =
   | { type: "chip"; group: number; skill: number }
@@ -253,19 +307,18 @@ export function TailorView() {
   const jdWordCount = jobDescription.trim() ? jobDescription.trim().split(/\s+/).length : 0
   const skillGroups = resume.skills || []
 
-  // Click a missing keyword/skill in the analysis panels → add it to a dedicated group
+  // Click a missing keyword/skill in the analysis panels → add it to the
+  // group it best belongs to (category name first, then related skills)
   const handleAddKeyword = (keyword: string) => {
     const kw = keyword.trim()
     if (!kw || includesTerm(allSkills, kw)) return
 
-    const groupIdx = skillGroups.findIndex(
-      (g) => (g.category || "").trim().toLowerCase() === KEYWORD_GROUP.toLowerCase(),
-    )
+    const groupIdx = bestSkillGroupIndex(skillGroups, kw)
 
     if (groupIdx >= 0) {
       dispatch(updateSkillGroup({ index: groupIdx, skills: [...skillGroups[groupIdx].skills, kw] }))
     } else {
-      dispatch(addSkillGroup({ category: KEYWORD_GROUP, skills: [kw] }))
+      dispatch(addSkillGroup({ category: KEYWORD_FALLBACK_GROUP, skills: [kw] }))
     }
   }
 

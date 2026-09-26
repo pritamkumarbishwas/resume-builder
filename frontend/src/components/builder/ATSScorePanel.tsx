@@ -110,7 +110,7 @@ export function ATSScorePanel({
                   key={i}
                   type="button"
                   onClick={() => onAddKeyword?.(kw)}
-                  title={`Add "${kw}" to Skills`}
+                  title={`Add "${kw}" to your skills`}
                   className="group/kw inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg transition-colors hover:border-rose-500/50 hover:bg-rose-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   {kw}

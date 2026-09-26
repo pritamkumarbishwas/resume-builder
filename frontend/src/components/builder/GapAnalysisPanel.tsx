@@ -58,7 +58,7 @@ function MissingChip({
     <button
       type="button"
       onClick={() => onAdd(keyword)}
-      title={`Add "${keyword}" to Skills`}
+      title={`Add "${keyword}" to your skills`}
       className={`group/kw inline-flex items-center gap-1 px-2 py-1 text-xs font-medium border rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${palette}`}
     >
       {keyword}
