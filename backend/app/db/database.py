@@ -27,4 +27,8 @@ class Database:
 db_instance = Database()
 
 async def get_db():
+    if db_instance.db is None:
+        raise RuntimeError(
+            "Database is not connected. Check your MONGO_URI and ensure MongoDB is reachable."
+        )
     return db_instance.db

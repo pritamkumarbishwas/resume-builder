@@ -32,9 +32,28 @@ app.add_middleware(
 
 @app.middleware("http")
 async def body_size_limit(request, call_next):
-    length = request.headers.get("content-length")
-    if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
-        return JSONResponse(status_code=413, content={"detail": "Request too large."})
+    # Read the actual bytes — do NOT trust Content-Length (it can be omitted or forged).
+    body = b""
+    async for chunk in request.stream():
+        body += chunk
+        if len(body) > MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Request too large."})
+
+    # Replay the buffered body via the ASGI receive callable.
+    # python-multipart (used by FastAPI's UploadFile) reads from _receive, not _body,
+    # so patching only _body would silently break all file uploads.
+    _replayed = False
+
+    async def _receive():
+        nonlocal _replayed
+        if not _replayed:
+            _replayed = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return {"type": "http.disconnect"}
+
+    request._receive = _receive
+    # Also set _body so await request.body() (used by JSON routes) is a free cache hit.
+    request._body = body
     return await call_next(request)
 
 app.include_router(resume.router, prefix="/api/resume", tags=["resume"])

@@ -18,16 +18,21 @@ export function CoverLetterModal({ isOpen, onClose, resume, jobDescription }: Co
   const template = useAppSelector((state) => state.resume.template)
   const [coverLetterText, setCoverLetterText] = useState("")
   const [copied, setCopied] = useState(false)
+  const [genError, setGenError] = useState<string | null>(null)
 
   if (!isOpen) return null
 
   const handleGenerate = async () => {
+    setGenError(null)
     try {
       const res = await generateCoverLetter({ resume, job_description: jobDescription, template }).unwrap()
       setCoverLetterText(res.cover_letter)
     } catch (err) {
       console.error("Failed to generate cover letter:", err)
-      alert("Failed to generate cover letter. Check console for details.")
+      const detail = (err as any)?.data?.detail
+      setGenError(
+        typeof detail === "string" ? detail : "Failed to generate cover letter. Please try again."
+      )
     }
   }
 
@@ -72,6 +77,11 @@ export function CoverLetterModal({ isOpen, onClose, resume, jobDescription }: Co
         <div className="p-5 sm:p-6 flex-1 overflow-y-auto custom-scrollbar">
           {!coverLetterText ? (
             <div className="flex flex-col items-center justify-center min-h-[24rem] text-center">
+              {genError && (
+                <p role="alert" className="mb-5 w-full rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-2.5 text-sm text-destructive text-left">
+                  {genError}
+                </p>
+              )}
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 border border-violet-500/25 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-violet-500" />
               </div>
