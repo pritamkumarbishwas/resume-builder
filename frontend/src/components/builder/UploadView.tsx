@@ -11,6 +11,11 @@ const STEPS = ["Upload Profile", "Set Target Role", "Optimize & Export"]
 export function UploadView() {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadResume, { isLoading, error }] = useUploadResumeMutation()
+  // Rate limits are not a file problem — surface the backend's friendly detail instead
+  const rateLimitDetail =
+    (error as any)?.status === 429 && typeof (error as any)?.data?.detail === "string"
+      ? ((error as any).data.detail as string)
+      : null
   const dispatch = useAppDispatch()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -120,7 +125,8 @@ export function UploadView() {
             className="mt-6 flex items-center gap-2 text-sm font-medium text-destructive bg-destructive/10 border border-destructive/20 px-4 py-2 rounded-full"
           >
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            We couldn&apos;t read that file. Please try another PDF or DOCX.
+            {rateLimitDetail ??
+              "We couldn't read that file. Please try another PDF or DOCX."}
           </p>
         )}
       </div>

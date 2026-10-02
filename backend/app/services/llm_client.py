@@ -144,7 +144,10 @@ class LLMClient:
                 last_error = e
                 last_content = None
                 last_finish = None
-                logger.warning("Attempt %s/%s failed. Retrying... Error: %s", attempt + 1, max_retries, e)
+                # Rate limits log via _backoff ("Sleeping..." / "failing fast"),
+                # so don't claim "Retrying..." right before failing fast.
+                if not self._is_rate_limit(e):
+                    logger.warning("Attempt %s/%s failed. Retrying... Error: %s", attempt + 1, max_retries, e)
                 if attempt + 1 < max_retries:
                     await self._backoff(e, attempt)
                 continue
@@ -261,7 +264,8 @@ class LLMClient:
                 raise ValueError("LLM returned an empty string.")
             except Exception as e:
                 last_error = e
-                logger.warning("generate_text attempt %s/%s failed. Error: %s", attempt + 1, max_retries, e)
+                if not self._is_rate_limit(e):
+                    logger.warning("generate_text attempt %s/%s failed. Error: %s", attempt + 1, max_retries, e)
                 if attempt + 1 < max_retries:
                     await self._backoff(e, attempt)
         if last_error is not None and self._is_rate_limit(last_error):
