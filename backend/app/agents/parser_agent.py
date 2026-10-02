@@ -9,11 +9,13 @@ async def parse_resume_text(raw_text: str) -> Resume:
     system_prompt = """
     You are an expert resume parser. Extract the information from the provided resume text into a structured JSON format matching the provided Resume schema.
     If some fields like 'portfolio' or 'linkedin' are missing, set them to null.
+    'title' is the professional headline shown under the name (e.g. "Senior Software Engineer"); set it to null when the resume has none.
     Structure the experience, education, projects, and skills clearly.
     Extract any personal, academic, or open-source projects into 'projects'. If the resume has no projects, output an empty list.
     Output MUST be a valid JSON object with the following exact structure:
     {
       "name": "John Doe",
+      "title": "Senior Software Engineer",
       "email": "john@example.com",
       "phone": "123-456-7890",
       "linkedin": "linkedin.com/in/johndoe",

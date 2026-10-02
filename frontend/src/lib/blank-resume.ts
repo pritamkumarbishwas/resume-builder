@@ -3,6 +3,7 @@ import type { Resume } from "@/store/slices/resume-slice"
 export function createBlankResume(): Resume {
   return {
     name: "",
+    title: "",
     email: "",
     phone: "",
     linkedin: "",

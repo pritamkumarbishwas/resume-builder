@@ -25,6 +25,7 @@
       padding: 18px 22px 16px 22px;
       margin-bottom: 8px;
       border-bottom: 4px solid #4f6bed;
+      page-break-inside: avoid;
     }
 
     h1 {
@@ -77,6 +78,7 @@
       border-collapse: collapse;
       margin-top: 4px;
       margin-bottom: 3px;
+      page-break-after: avoid;
     }
 
     table.job-header td {
@@ -118,38 +120,18 @@
       color: #6b7385;
     }
 
-    /* ---------- Skills ---------- */
-    .skills-grid {
-      width: 100%;
-      border-collapse: collapse;
+    /* ---------- Skills: plain list (no table — ATS safe), accent category ---------- */
+    .skills-list {
+      margin-top: 4px;
     }
 
-    .skills-grid td {
-      padding: 5px 0;
-      vertical-align: top;
-      border-bottom: 1px solid #e6e9f2;
+    .skills-item {
+      margin-bottom: 4px;
+      text-align: left;
     }
 
-    .skill-cat {
-      font-weight: 700;
-      width: 24%;
+    .skills-item strong {
       color: #1e2a4a;
-      padding-right: 10px;
-    }
-
-    .skill-items {
-      width: 76%;
-      color: #2d3340;
-    }
-
-    .chip {
-      display: inline-block;
-      background: #eef1fd;
-      color: #2b3a8f;
-      border-radius: 9px;
-      padding: 1px 8px;
-      margin: 1px 3px 2px 0;
-      font-size: 9pt;
     }
   </style>
 </head>
@@ -172,15 +154,20 @@
   {% if resume.experiences %}
   <h2>Experience</h2>
   {% for exp in resume.experiences %}
+  {% set sd = (exp.start_date or '') | trim %}
+  {% set ed = (exp.end_date or '') | trim %}
+  {% if sd and ed %}{% set exp_date = sd ~ ' - ' ~ ed %}
+  {%- elif sd %}{% set exp_date = sd ~ ' - Present' %}
+  {%- elif ed %}{% set exp_date = ed %}
+  {%- else %}{% set exp_date = '' %}{% endif %}
   <div class="entry">
     <table class="job-header">
       <tr>
         <td style="width: 70%; text-align: left;">
-          <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">at {{ exp.company
-            }}{% if exp.location %}, {{ exp.location }}{% endif %}</span>{% endif %}
+          <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">at {{ exp.company }}</span>{% endif %}{% if exp.location %}, <span class="company">{{ exp.location }}</span>{% endif %}
         </td>
         <td style="width: 30%;" class="date">
-          {{ exp.start_date }} – {{ exp.end_date or 'Present' }}
+          {{ exp_date }}
         </td>
       </tr>
     </table>
@@ -203,7 +190,7 @@
       <tr>
         <td style="width: 70%; text-align: left;">
           <span class="job-title">{{ proj.name }}</span>
-          {% if proj.technologies %}<span class="company"> — {{ proj.technologies | join(', ') }}</span>{% endif %}
+          {% if proj.technologies %}<span class="company"> - {{ proj.technologies | join(', ') }}</span>{% endif %}
         </td>
         <td style="width: 30%;" class="date">
           {% if proj.link %}{{ proj.link }}{% endif %}
@@ -229,10 +216,10 @@
       <tr>
         <td style="width: 70%; text-align: left;">
           <span class="job-title">{{ edu.degree }}</span>{% if edu.institution %}, <span class="company">{{
-            edu.institution }}</span>{% endif %}
+            edu.institution }}</span>{% endif %}{% if edu.location %}, <span class="company">{{ edu.location }}</span>{% endif %}
         </td>
         <td style="width: 30%;" class="date">
-          {{ edu.graduation_date }}
+          {{ edu.graduation_date or '' }}
         </td>
       </tr>
     </table>
@@ -243,14 +230,11 @@
 
   {% if resume.skills %}
   <h2>Technical Skills</h2>
-  <table class="skills-grid">
+  <div class="skills-list">
     {% for skill_cat in resume.skills %}
-    <tr>
-      <td class="skill-cat">{{ skill_cat.category }}</td>
-      <td class="skill-items">{% for skill in skill_cat.skills %}<span class="chip">{{ skill }}</span> {% endfor %}</td>
-    </tr>
+    <div class="skills-item"><strong>{{ skill_cat.category }}:</strong> {{ skill_cat.skills | join(', ') }}</div>
     {% endfor %}
-  </table>
+  </div>
   {% endif %}
 </body>
 

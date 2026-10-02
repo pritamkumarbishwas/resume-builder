@@ -657,6 +657,15 @@ export function TailorView() {
                     />
                   </label>
                   <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    Headline
+                    <Input
+                      value={resume.title || ""}
+                      onChange={(e) => dispatch(updateContact({ title: e.target.value }))}
+                      placeholder="Senior Software Engineer"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
                     Email
                     <Input
                       value={resume.email || ""}

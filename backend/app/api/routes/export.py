@@ -5,6 +5,8 @@ from app.services.template_registry import get_template, list_templates
 from jinja2 import Environment, FileSystemLoader
 from xhtml2pdf import pisa
 from docx import Document
+from docx.enum.text import WD_TAB_ALIGNMENT
+from docx.oxml import OxmlElement
 from docx.shared import Pt, Inches, RGBColor
 import io
 import os
@@ -49,13 +51,13 @@ async def export_pdf(resume: Resume, template: str = "classic"):
 
         sanitized_data = sanitize_text(resume.model_dump())
         html_out = html_template.render(resume=sanitized_data)
-        
+
         result_file = io.BytesIO()
         pisa_status = pisa.CreatePDF(html_out, dest=result_file, encoding='utf-8')
-        
+
         if pisa_status.err:
             raise Exception("PDF generation failed")
-            
+
         return Response(content=result_file.getvalue(), media_type="application/pdf")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -74,16 +76,58 @@ def _section_heading(doc, title: str, style):
     return p
 
 
-def _meta_line(doc, parts, italic=True, size=9.5):
-    text = " | ".join(str(p) for p in parts if p)
-    if not text:
-        return None
+def _date_range(start, end):
+    """Same date logic as the HTML templates: empty only when both are empty."""
+    start = (start or "").strip()
+    end = (end or "").strip()
+    if start and end:
+        return f"{start} - {end}"
+    if start:
+        return f"{start} - Present"
+    if end:
+        return end
+    return ""
+
+
+def _entry_header(doc, title_text, meta_parts, right_text, style):
+    """One header line: bold title + italic meta on the left, date/link right-aligned.
+
+    Uses a right tab stop (not a table) so the layout mirrors the HTML row
+    while staying ATS-safe single-column text.
+    """
     p = doc.add_paragraph()
-    run = p.add_run(text)
-    run.italic = italic
-    run.font.size = Pt(size)
-    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.space_before = Pt(6)
+    p.paragraph_format.space_after = Pt(0)
+    usable = doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin
+    p.paragraph_format.tab_stops.add_tab_stop(usable, WD_TAB_ALIGNMENT.RIGHT)
+
+    title_run = p.add_run(title_text or "")
+    title_run.bold = True
+    title_run.font.size = Pt(11)
+
+    for text in meta_parts:
+        if not text:
+            continue
+        r = p.add_run(text)
+        r.italic = True
+        r.font.size = Pt(9.5)
+
+    if right_text:
+        tab = p.add_run()
+        tab._r.append(OxmlElement("w:tab"))
+        tab.font.size = Pt(9.5)
+        r = p.add_run(right_text)
+        r.font.size = Pt(9.5)
     return p
+
+
+def _bullets(doc, items):
+    for item in items or []:
+        if not item.strip():
+            continue
+        bp = doc.add_paragraph(item, style="List Bullet")
+        bp.paragraph_format.space_after = Pt(0)
+        bp.paragraph_format.left_indent = Inches(0.25)
 
 
 @router.post("/docx")
@@ -91,7 +135,8 @@ async def export_docx(resume: Resume, template: str = "classic"):
     """ATS-friendly single-column DOCX export (no tables, no columns)."""
     try:
         style = get_template(template).docx
-        data = resume.model_dump()
+        # Same sanitisation as PDF so both files contain identical characters
+        data = sanitize_text(resume.model_dump())
         doc = Document()
 
         normal = doc.styles["Normal"]
@@ -112,77 +157,77 @@ async def export_docx(resume: Resume, template: str = "classic"):
         name_run.font.color.rgb = RGBColor.from_string(style.accent_hex)
         name_p.paragraph_format.space_after = Pt(2)
 
-        _meta_line(
-            doc,
-            [data.get("email"), data.get("phone"), data.get("linkedin"), data.get("portfolio")],
-            italic=False,
-            size=9.5,
-        )
+        if data.get("title"):
+            title_p = doc.add_paragraph()
+            title_run = title_p.add_run(data["title"])
+            title_run.font.size = Pt(11)
+            title_run.font.color.rgb = RGBColor.from_string("5B6472")
+            title_p.paragraph_format.space_after = Pt(2)
+
+        contact = [
+            data.get("email"),
+            data.get("phone"),
+            data.get("location"),
+            data.get("linkedin"),
+            data.get("portfolio"),
+        ]
+        contact_text = style.contact_sep.join(str(c) for c in contact if c)
+        if contact_text:
+            cp = doc.add_paragraph()
+            cr = cp.add_run(contact_text)
+            cr.font.size = Pt(9.5)
+            cp.paragraph_format.space_after = Pt(4)
 
         if data.get("summary"):
-            _section_heading(doc, "Professional Summary", style)
+            _section_heading(doc, style.summary_heading, style)
             p = doc.add_paragraph(data["summary"])
             p.paragraph_format.space_after = Pt(4)
 
         if data.get("experiences"):
             _section_heading(doc, "Experience", style)
             for exp in data["experiences"]:
-                title_p = doc.add_paragraph()
-                title_p.paragraph_format.space_before = Pt(6)
-                title_p.paragraph_format.space_after = Pt(0)
-                title_run = title_p.add_run(exp.get("title") or "")
-                title_run.bold = True
-                title_run.font.size = Pt(11)
-                _meta_line(
+                meta = []
+                if exp.get("company"):
+                    meta.append(style.exp_connector + exp["company"])
+                if exp.get("location"):
+                    meta.append(", " + exp["location"])
+                _entry_header(
                     doc,
-                    [
-                        exp.get("company"),
-                        exp.get("location"),
-                        f"{exp.get('start_date') or ''} - {exp.get('end_date') or 'Present'}".strip(" -"),
-                    ],
+                    exp.get("title") or "",
+                    meta,
+                    _date_range(exp.get("start_date"), exp.get("end_date")),
+                    style,
                 )
-                for bullet in exp.get("description") or []:
-                    if not bullet.strip():
-                        continue
-                    bp = doc.add_paragraph(bullet, style="List Bullet")
-                    bp.paragraph_format.space_after = Pt(0)
-                    bp.paragraph_format.left_indent = Inches(0.25)
+                _bullets(doc, exp.get("description"))
 
         if data.get("projects"):
             _section_heading(doc, "Projects", style)
             for project in data["projects"]:
                 if not (project.get("name") or project.get("description")):
                     continue
-                proj_p = doc.add_paragraph()
-                proj_p.paragraph_format.space_before = Pt(6)
-                proj_p.paragraph_format.space_after = Pt(0)
-                name_run = proj_p.add_run(project.get("name") or "")
-                name_run.bold = True
-                name_run.font.size = Pt(11)
-                _meta_line(doc, [", ".join(project.get("technologies") or []), project.get("link")])
-                for bullet in project.get("description") or []:
-                    if not bullet.strip():
-                        continue
-                    bp = doc.add_paragraph(bullet, style="List Bullet")
-                    bp.paragraph_format.space_after = Pt(0)
-                    bp.paragraph_format.left_indent = Inches(0.25)
+                techs = ", ".join(t for t in (project.get("technologies") or []) if t)
+                meta = [(style.tech_connector + techs)] if techs else []
+                _entry_header(doc, project.get("name") or "", meta, project.get("link") or "", style)
+                _bullets(doc, project.get("description"))
 
         if data.get("education"):
             _section_heading(doc, "Education", style)
             for edu in data["education"]:
-                edu_p = doc.add_paragraph()
-                edu_p.paragraph_format.space_before = Pt(4)
-                edu_p.paragraph_format.space_after = Pt(0)
-                deg_run = edu_p.add_run(edu.get("degree") or "")
-                deg_run.bold = True
-                deg_run.font.size = Pt(11)
-                _meta_line(
-                    doc,
-                    [edu.get("institution"), edu.get("location"), edu.get("graduation_date"), edu.get("gpa") and f"GPA: {edu['gpa']}"],
-                )
+                meta = []
+                if edu.get("institution"):
+                    meta.append(style.edu_connector + edu["institution"])
+                if edu.get("location"):
+                    meta.append(", " + edu["location"])
+                _entry_header(doc, edu.get("degree") or "", meta, edu.get("graduation_date") or "", style)
+                if edu.get("gpa"):
+                    gp = doc.add_paragraph()
+                    gp.paragraph_format.space_after = Pt(2)
+                    gr = gp.add_run(f"GPA: {edu['gpa']}")
+                    gr.font.size = Pt(9.5)
+                    gr.font.color.rgb = RGBColor.from_string("5B6472")
 
         if data.get("skills"):
-            _section_heading(doc, "Skills", style)
+            _section_heading(doc, style.skills_heading, style)
             for group in data["skills"]:
                 skills = [s for s in (group.get("skills") or []) if s]
                 if not skills and not group.get("category"):

@@ -23,6 +23,7 @@ JSON structure (all fields required unless noted optional):
   "assistant_message": "I have shortened your summary and moved your Python work to the top.",
   "updated_resume": {
     "name": "John Doe",
+    "title": "Senior Software Engineer",
     "email": "john@example.com",
     "phone": "123-456-7890",
     "linkedin": "linkedin.com/in/johndoe",

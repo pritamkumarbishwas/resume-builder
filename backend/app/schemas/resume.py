@@ -28,6 +28,7 @@ class Project(BaseModel):
 
 class Resume(BaseModel):
     name: str
+    title: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     linkedin: Optional[str] = None

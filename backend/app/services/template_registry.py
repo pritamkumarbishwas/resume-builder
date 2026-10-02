@@ -14,10 +14,18 @@ from typing import Dict, List, Optional
 
 @dataclass(frozen=True)
 class DocxStyle:
+    """DOCX rules that mirror the HTML/PDF layout so both exports match."""
+
     accent_hex: str = "111111"
     body_font: str = "Calibri"
     heading_font: str = "Calibri"
     heading_uppercase: bool = True
+    contact_sep: str = " | "
+    exp_connector: str = ", "
+    edu_connector: str = ", "
+    tech_connector: str = " | "
+    summary_heading: str = "Professional Summary"
+    skills_heading: str = "Skills"
 
 
 @dataclass(frozen=True)
@@ -56,27 +64,60 @@ TEMPLATES: Dict[str, ResumeTemplate] = {
         name="Classic",
         description="Traditional centered layout with ruled section headings — safe for any industry.",
         html_file="classic.html",
-        docx=DocxStyle(accent_hex="000000", body_font="Calibri", heading_font="Calibri", heading_uppercase=True),
+        docx=DocxStyle(
+            accent_hex="1F3A5F",
+            body_font="Georgia",
+            heading_font="Georgia",
+            heading_uppercase=True,
+            contact_sep=" | ",
+            exp_connector=", ",
+            edu_connector=", ",
+            tech_connector=" | ",
+            summary_heading="Professional Summary",
+            skills_heading="Skills",
+        ),
         writing_style=CLASSIC_WRITING_STYLE,
-        preview={"accent": "111111", "font": "Helvetica", "layout": "Centered header, ruled sections"},
+        preview={"accent": "1F3A5F", "font": "Georgia", "layout": "Centered header, ruled sections"},
     ),
     "modern": ResumeTemplate(
         id="modern",
         name="Modern",
         description="Left-aligned header with a colour accent bar — stands out for tech and design roles.",
         html_file="modern.html",
-        docx=DocxStyle(accent_hex="5A67D8", body_font="Calibri", heading_font="Calibri", heading_uppercase=True),
+        docx=DocxStyle(
+            accent_hex="1E2A4A",
+            body_font="Arial",
+            heading_font="Arial",
+            heading_uppercase=False,
+            contact_sep=" • ",
+            exp_connector=" at ",
+            edu_connector=", ",
+            tech_connector=" - ",
+            summary_heading="Professional Summary",
+            skills_heading="Technical Skills",
+        ),
         writing_style=MODERN_WRITING_STYLE,
-        preview={"accent": "5A67D8", "font": "Open Sans", "layout": "Colour bar header, accent headings"},
+        preview={"accent": "4F6BED", "font": "Open Sans", "layout": "Colour bar header, accent headings"},
     ),
     "minimal": ResumeTemplate(
         id="minimal",
         name="Minimal",
         description="Plain single-column, no colour or ornament — maximum ATS parsability.",
         html_file="minimal.html",
-        docx=DocxStyle(accent_hex="000000", body_font="Arial", heading_font="Arial", heading_uppercase=False),
+        docx=DocxStyle(
+            accent_hex="000000",
+            body_font="Arial",
+            heading_font="Arial",
+            heading_uppercase=True,
+            contact_sep=" / ",
+            exp_connector=" - ",
+            edu_connector=" - ",
+            tech_connector=" - ",
+            summary_heading="Summary",
+            skills_heading="Skills",
+        ),
         writing_style=MINIMAL_WRITING_STYLE,
-        preview={"accent": "444444", "font": "Arial", "layout": "Plain single column, no ornament"},
+        preview={"accent": "000000", "font": "Arial", "layout": "Plain single column, no ornament"},
     ),
 }
 

@@ -31,6 +31,7 @@ export interface Project {
 
 export interface Resume {
   name: string
+  title?: string
   email?: string
   phone?: string
   linkedin?: string
@@ -83,7 +84,7 @@ const resumeSlice = createSlice({
     },
     updateContact(
       state,
-      action: PayloadAction<Partial<Pick<Resume, "name" | "email" | "phone" | "linkedin" | "portfolio">>>,
+      action: PayloadAction<Partial<Pick<Resume, "name" | "title" | "email" | "phone" | "linkedin" | "portfolio">>>,
     ) {
       if (state.resume) {
         Object.assign(state.resume, action.payload)

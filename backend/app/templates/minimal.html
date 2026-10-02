@@ -67,6 +67,7 @@
       border-collapse: collapse;
       margin-top: 6px;
       margin-bottom: 2px;
+      page-break-after: avoid;
     }
 
     table.job-header td {
@@ -130,15 +131,20 @@
   {% if resume.experiences %}
   <h2>Experience</h2>
   {% for exp in resume.experiences %}
+  {% set sd = (exp.start_date or '') | trim %}
+  {% set ed = (exp.end_date or '') | trim %}
+  {% if sd and ed %}{% set exp_date = sd ~ ' - ' ~ ed %}
+  {%- elif sd %}{% set exp_date = sd ~ ' - Present' %}
+  {%- elif ed %}{% set exp_date = ed %}
+  {%- else %}{% set exp_date = '' %}{% endif %}
   <div class="entry">
     <table class="job-header">
       <tr>
         <td style="width: 72%; text-align: left;">
-          <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">- {{ exp.company }}{%
-            if exp.location %}, {{ exp.location }}{% endif %}</span>{% endif %}
+          <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">- {{ exp.company }}</span>{% endif %}{% if exp.location %}, <span class="company">{{ exp.location }}</span>{% endif %}
         </td>
         <td style="width: 28%;" class="date">
-          {{ exp.start_date }} - {{ exp.end_date or 'Present' }}
+          {{ exp_date }}
         </td>
       </tr>
     </table>
@@ -187,10 +193,10 @@
       <tr>
         <td style="width: 72%; text-align: left;">
           <span class="job-title">{{ edu.degree }}</span>{% if edu.institution %} <span class="company">- {{
-            edu.institution }}</span>{% endif %}
+            edu.institution }}</span>{% endif %}{% if edu.location %}, <span class="company">{{ edu.location }}</span>{% endif %}
         </td>
         <td style="width: 28%;" class="date">
-          {{ edu.graduation_date }}
+          {{ edu.graduation_date or '' }}
         </td>
       </tr>
     </table>
