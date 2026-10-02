@@ -3,6 +3,7 @@ import { useGenerateCoverLetterMutation } from "@/store/api/resume-api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { X, Sparkles, Copy, Check, FileText } from "lucide-react"
+import { useAppSelector } from "@/store/hooks"
 import type { Resume } from "@/store/slices/resume-slice"
 
 interface CoverLetterModalProps {
@@ -14,6 +15,7 @@ interface CoverLetterModalProps {
 
 export function CoverLetterModal({ isOpen, onClose, resume, jobDescription }: CoverLetterModalProps) {
   const [generateCoverLetter, { isLoading }] = useGenerateCoverLetterMutation()
+  const template = useAppSelector((state) => state.resume.template)
   const [coverLetterText, setCoverLetterText] = useState("")
   const [copied, setCopied] = useState(false)
 
@@ -21,7 +23,7 @@ export function CoverLetterModal({ isOpen, onClose, resume, jobDescription }: Co
 
   const handleGenerate = async () => {
     try {
-      const res = await generateCoverLetter({ resume, job_description: jobDescription }).unwrap()
+      const res = await generateCoverLetter({ resume, job_description: jobDescription, template }).unwrap()
       setCoverLetterText(res.cover_letter)
     } catch (err) {
       console.error("Failed to generate cover letter:", err)

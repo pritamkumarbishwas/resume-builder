@@ -8,10 +8,12 @@ from app.schemas.resume import Resume
 class BulletRewriteRequest(BaseModel):
     original_bullets: List[str]
     job_description: str
+    template: Optional[str] = None        # template id from the template registry
 
 class SummaryRewriteRequest(BaseModel):
     resume_text: str
     job_description: str
+    template: Optional[str] = None
 
 class ATSScoreRequest(BaseModel):
     resume: Resume
@@ -26,6 +28,7 @@ class ATSScoreResponse(BaseModel):
 class CoverLetterRequest(BaseModel):
     resume: Resume
     job_description: str
+    template: Optional[str] = None
 
 
 # ── Phase 2: JD Analyzer ────────────────────────────────────────────────────
@@ -75,6 +78,7 @@ class ChatEditRequest(BaseModel):
     job_description: str
     messages: List[ChatMessage]           # full conversation history
     user_message: str                     # latest message
+    template: Optional[str] = None
 
 class ChatEditResponse(BaseModel):
     assistant_message: str

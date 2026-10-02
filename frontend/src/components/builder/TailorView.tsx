@@ -31,10 +31,11 @@ import { JobDescriptionCard } from "./JobDescriptionCard"
 import { ProjectsSection } from "./ProjectsSection"
 import { EducationSection } from "./EducationSection"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
-import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery } from "@/store/api/resume-api"
+import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery, useGetTemplatesQuery } from "@/store/api/resume-api"
 import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
 import { computeScoreBreakdown } from "@/lib/score-breakdown"
-import { setResume, setJobDescription } from "@/store/slices/resume-slice"
+import { setResume, setJobDescription, setTemplate } from "@/store/slices/resume-slice"
+import { TemplatePicker } from "./TemplatePicker"
 
 function PanelSkeleton({ label }: { label: string }) {
   return (
@@ -146,6 +147,8 @@ export function TailorView() {
   const dispatch = useAppDispatch()
   const resume = useAppSelector((state) => state.resume.resume)
   const jobDescription = useAppSelector((state) => state.resume.jobDescription)
+  const template = useAppSelector((state) => state.resume.template)
+  const { data: templateList } = useGetTemplatesQuery()
 
   const [rewriteBullets, { isLoading: isRewriting }] = useRewriteBulletsMutation()
   const [generateSummary, { isLoading: isGenerating }] = useGenerateSummaryMutation()
@@ -394,6 +397,7 @@ export function TailorView() {
       const res = await rewriteBullets({
         original_bullets,
         job_description: jobDescription,
+        template,
       }).unwrap()
       dispatch(updateExperienceBullets({ index, bullets: res.rewritten_bullets }))
     } catch (err) {
@@ -409,6 +413,7 @@ export function TailorView() {
       const res = await generateSummary({
         resume_text: resumeText,
         job_description: jobDescription,
+        template,
       }).unwrap()
       dispatch(updateSummary(res.summary))
     } catch (err) {
@@ -416,9 +421,9 @@ export function TailorView() {
     }
   }
 
-  const handleExport = async (templateName: string = "classic") => {
+  const handleExport = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/export/pdf?template=${templateName}`, {
+      const res = await fetch(`${API_BASE_URL}/api/export/pdf?template=${encodeURIComponent(template)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resume),
@@ -441,7 +446,7 @@ export function TailorView() {
 
   const handleExportDocx = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/export/docx`, {
+      const res = await fetch(`${API_BASE_URL}/api/export/docx?template=${encodeURIComponent(template)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(resume),
@@ -540,13 +545,17 @@ export function TailorView() {
           >
             <FileText className="mr-1.5 h-3.5 w-3.5" /> Cover Letter
           </Button>
+          <TemplatePicker
+            templates={templateList}
+            value={template}
+            onChange={(id) => dispatch(setTemplate(id))}
+          />
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => handleExport("classic")}
-            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
+            onClick={handleExport}
+            className="rounded-full bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90"
           >
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Classic PDF
+            <Download className="mr-1.5 h-3.5 w-3.5" /> Export PDF
           </Button>
           <Button
             size="sm"
@@ -555,13 +564,6 @@ export function TailorView() {
             className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
             <FileText className="mr-1.5 h-3.5 w-3.5" /> DOCX
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => handleExport("modern")}
-            className="rounded-full bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90"
-          >
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Modern PDF
           </Button>
         </div>
       </div>

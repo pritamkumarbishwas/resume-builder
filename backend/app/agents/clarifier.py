@@ -1,20 +1,26 @@
 import logging
 from app.services.llm_client import llm
+from app.services.template_registry import get_template
 from app.schemas.resume import Resume
 from app.schemas.analysis import ChatMessage, ChatEditResponse
 
 logger = logging.getLogger(__name__)
 
-_CLARIFIER_SYSTEM_PROMPT = """
-You are an expert AI Resume Builder assistant. 
-The user is asking you to modify their resume. 
-Review their request and return a JSON object with two keys:
-1. 'assistant_message': A friendly response explaining what you changed.
-2. 'updated_resume': The full updated resume object matching the exact structure below.
+_CLARIFIER_SYSTEM_PROMPT = """You are an expert AI resume editor. The user asks you to change their resume in free text ("make my summary shorter", "emphasize my Python projects").
 
-Output MUST be a valid JSON object with the following exact structure:
+How to respond:
+1. Apply exactly what the user asked for - nothing more, nothing less.
+2. Return the COMPLETE updated resume, not a diff: every field you were not asked to change must be copied through unchanged (name, contact details, dates, other sections).
+3. Never invent employers, titles, dates, metrics or skills. You may only rephrase or reorganize content that is already in the current resume.
+4. If the request is impossible or unclear, still return the resume unchanged and explain why in 'assistant_message'.
+
+Return ONLY a JSON object with exactly two keys:
+- "assistant_message": one or two friendly sentences describing what you changed.
+- "updated_resume": the full resume object with the exact structure shown below.
+
+JSON structure (all fields required unless noted optional):
 {
-  "assistant_message": "I have updated your summary and emphasized your Python skills.",
+  "assistant_message": "I have shortened your summary and moved your Python work to the top.",
   "updated_resume": {
     "name": "John Doe",
     "email": "john@example.com",
@@ -28,6 +34,7 @@ Output MUST be a valid JSON object with the following exact structure:
         "company": "Tech Corp",
         "start_date": "2020",
         "end_date": "Present",
+        "location": "Remote",
         "description": ["Developed features", "Fixed bugs"]
       }
     ],
@@ -35,7 +42,9 @@ Output MUST be a valid JSON object with the following exact structure:
       {
         "degree": "B.S. Computer Science",
         "institution": "University",
-        "graduation_date": "2020"
+        "graduation_date": "2020",
+        "location": "Boston, MA",
+        "gpa": "3.8"
       }
     ],
     "projects": [
@@ -53,16 +62,28 @@ Output MUST be a valid JSON object with the following exact structure:
       }
     ]
   }
-}
-"""
+}"""
 
-async def process_chat_edit(resume: Resume, job_description: str, messages: list[ChatMessage], user_message: str) -> ChatEditResponse:
+
+async def process_chat_edit(
+    resume: Resume,
+    job_description: str,
+    messages: list[ChatMessage],
+    user_message: str,
+    template: str | None = None,
+) -> ChatEditResponse:
     """
     Handle free-text chat requests to edit the resume.
     Returns the updated resume and an assistant response.
     """
+    tpl = get_template(template)
+    system_prompt = (
+        _CLARIFIER_SYSTEM_PROMPT
+        + f'\n\nWRITING STYLE — "{tpl.name}" (apply this voice to any text you rewrite):\n{tpl.writing_style}'
+    )
+
     chat_history = "\n".join([f"{m.role.upper()}: {m.content}" for m in messages])
-    
+
     user_prompt = f"""
 JOB DESCRIPTION:
 {job_description}
@@ -76,9 +97,9 @@ CHAT HISTORY:
 USER REQUEST:
 {user_message}
 """
-    logger.info("Processing chat edit with LLM...")
+    logger.info(f"Processing chat edit with LLM (template={tpl.id})...")
     try:
-        data = await llm.generate_json(_CLARIFIER_SYSTEM_PROMPT, user_prompt)
+        data = await llm.generate_json(system_prompt, user_prompt)
         assistant_message = data.get("assistant_message", "I have updated your resume as requested.")
         updated_data = data.get("updated_resume") or resume.model_dump()
         if "projects" not in updated_data:

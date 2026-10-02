@@ -3,7 +3,7 @@ import { useChatEditMutation } from "@/store/api/resume-api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { X, MessageSquare, Send } from "lucide-react"
-import { useAppDispatch } from "@/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { setResume } from "@/store/slices/resume-slice"
 import type { Resume } from "@/store/slices/resume-slice"
 
@@ -21,6 +21,7 @@ interface Message {
 
 export function ChatEditorModal({ isOpen, onClose, resume, jobDescription }: ChatEditorModalProps) {
   const dispatch = useAppDispatch()
+  const template = useAppSelector((state) => state.resume.template)
   const [chatEdit, { isLoading }] = useChatEditMutation()
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Hi! I'm your AI Resume Editor. What would you like to change? (e.g., 'Make my summary shorter', 'Emphasize my Python experience in the last job')" }
@@ -47,7 +48,8 @@ export function ChatEditorModal({ isOpen, onClose, resume, jobDescription }: Cha
         resume, 
         job_description: jobDescription, 
         messages, 
-        user_message: userMsg 
+        user_message: userMsg,
+        template,
       }).unwrap()
       
       setMessages(prev => [...prev, { role: "assistant", content: res.assistant_message }])

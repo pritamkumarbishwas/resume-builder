@@ -8,7 +8,7 @@ router = APIRouter()
 @router.post("/rewrite-bullets")
 async def rewrite_resume_bullets(req: BulletRewriteRequest):
     try:
-        new_bullets = await rewrite_bullets(req.original_bullets, req.job_description)
+        new_bullets = await rewrite_bullets(req.original_bullets, req.job_description, req.template)
         return {"rewritten_bullets": new_bullets}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -16,7 +16,7 @@ async def rewrite_resume_bullets(req: BulletRewriteRequest):
 @router.post("/generate-summary")
 async def generate_resume_summary(req: SummaryRewriteRequest):
     try:
-        summary = await generate_summary(req.resume_text, req.job_description)
+        summary = await generate_summary(req.resume_text, req.job_description, req.template)
         return {"summary": summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -26,7 +26,7 @@ async def generate_cover_letter_route(req: CoverLetterRequest):
     try:
         # Dump the resume object to a formatted string for the LLM context
         resume_text = req.resume.model_dump_json()
-        cover_letter = await generate_cover_letter(resume_text, req.job_description)
+        cover_letter = await generate_cover_letter(resume_text, req.job_description, req.template)
         return {"cover_letter": cover_letter}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -34,7 +34,7 @@ async def generate_cover_letter_route(req: CoverLetterRequest):
 @router.post("/chat-edit")
 async def handle_chat_edit(req: ChatEditRequest):
     try:
-        return await process_chat_edit(req.resume, req.job_description, req.messages, req.user_message)
+        return await process_chat_edit(req.resume, req.job_description, req.messages, req.user_message, req.template)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -48,6 +48,7 @@ interface ResumeState {
   step: WizardStep
   resume: Resume | null
   jobDescription: string
+  template: string
   isAnalyzing: boolean
 }
 
@@ -55,6 +56,7 @@ const initialState: ResumeState = {
   step: "UPLOAD",
   resume: null,
   jobDescription: "",
+  template: "classic",
   isAnalyzing: false,
 }
 
@@ -70,6 +72,9 @@ const resumeSlice = createSlice({
     },
     setJobDescription(state, action: PayloadAction<string>) {
       state.jobDescription = action.payload
+    },
+    setTemplate(state, action: PayloadAction<string>) {
+      state.template = action.payload
     },
     updateSummary(state, action: PayloadAction<string>) {
       if (state.resume) {
@@ -182,6 +187,7 @@ export const {
   setStep,
   setResume,
   setJobDescription,
+  setTemplate,
   updateSummary,
   updateContact,
   addExperience,

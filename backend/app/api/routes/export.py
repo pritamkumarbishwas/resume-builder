@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from app.schemas.resume import Resume
+from app.services.template_registry import get_template, list_templates
 from jinja2 import Environment, FileSystemLoader
 from xhtml2pdf import pisa
 from docx import Document
@@ -31,16 +32,21 @@ def sanitize_text(data):
                     .replace('…', '...'))
     return data
 
+@router.get("/templates")
+async def get_export_templates():
+    """List available resume templates (layout + AI writing style metadata)."""
+    return list_templates()
+
+
 @router.post("/pdf")
 async def export_pdf(resume: Resume, template: str = "classic"):
     try:
-        # Fallback to classic if template doesn't exist
-        template_file = f'{template}.html'
+        tpl = get_template(template)
         try:
-            html_template = env.get_template(template_file)
+            html_template = env.get_template(tpl.html_file)
         except Exception:
-            html_template = env.get_template('classic.html')
-            
+            html_template = env.get_template(get_template(None).html_file)
+
         sanitized_data = sanitize_text(resume.model_dump())
         html_out = html_template.render(resume=sanitized_data)
         
@@ -55,17 +61,16 @@ async def export_pdf(resume: Resume, template: str = "classic"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-ACCENT = RGBColor(0x7C, 0x3A, 0xED)
-
-
-def _section_heading(doc, title: str):
+def _section_heading(doc, title: str, style):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(4)
-    run = p.add_run(title.upper())
+    text = title.upper() if style.heading_uppercase else title
+    run = p.add_run(text)
     run.bold = True
     run.font.size = Pt(12)
-    run.font.color.rgb = ACCENT
+    run.font.name = style.heading_font
+    run.font.color.rgb = RGBColor.from_string(style.accent_hex)
     return p
 
 
@@ -82,14 +87,15 @@ def _meta_line(doc, parts, italic=True, size=9.5):
 
 
 @router.post("/docx")
-async def export_docx(resume: Resume):
+async def export_docx(resume: Resume, template: str = "classic"):
     """ATS-friendly single-column DOCX export (no tables, no columns)."""
     try:
+        style = get_template(template).docx
         data = resume.model_dump()
         doc = Document()
 
         normal = doc.styles["Normal"]
-        normal.font.name = "Calibri"
+        normal.font.name = style.body_font
         normal.font.size = Pt(10.5)
 
         for section in doc.sections:
@@ -102,6 +108,8 @@ async def export_docx(resume: Resume):
         name_run = name_p.add_run(data.get("name") or "")
         name_run.bold = True
         name_run.font.size = Pt(22)
+        name_run.font.name = style.heading_font
+        name_run.font.color.rgb = RGBColor.from_string(style.accent_hex)
         name_p.paragraph_format.space_after = Pt(2)
 
         _meta_line(
@@ -112,12 +120,12 @@ async def export_docx(resume: Resume):
         )
 
         if data.get("summary"):
-            _section_heading(doc, "Professional Summary")
+            _section_heading(doc, "Professional Summary", style)
             p = doc.add_paragraph(data["summary"])
             p.paragraph_format.space_after = Pt(4)
 
         if data.get("experiences"):
-            _section_heading(doc, "Experience")
+            _section_heading(doc, "Experience", style)
             for exp in data["experiences"]:
                 title_p = doc.add_paragraph()
                 title_p.paragraph_format.space_before = Pt(6)
@@ -141,7 +149,7 @@ async def export_docx(resume: Resume):
                     bp.paragraph_format.left_indent = Inches(0.25)
 
         if data.get("projects"):
-            _section_heading(doc, "Projects")
+            _section_heading(doc, "Projects", style)
             for project in data["projects"]:
                 if not (project.get("name") or project.get("description")):
                     continue
@@ -160,7 +168,7 @@ async def export_docx(resume: Resume):
                     bp.paragraph_format.left_indent = Inches(0.25)
 
         if data.get("education"):
-            _section_heading(doc, "Education")
+            _section_heading(doc, "Education", style)
             for edu in data["education"]:
                 edu_p = doc.add_paragraph()
                 edu_p.paragraph_format.space_before = Pt(4)
@@ -174,7 +182,7 @@ async def export_docx(resume: Resume):
                 )
 
         if data.get("skills"):
-            _section_heading(doc, "Skills")
+            _section_heading(doc, "Skills", style)
             for group in data["skills"]:
                 skills = [s for s in (group.get("skills") or []) if s]
                 if not skills and not group.get("category"):

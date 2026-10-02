@@ -3,6 +3,14 @@ import type { Resume } from "../slices/resume-slice"
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
 
+export interface TemplateInfo {
+  id: string
+  name: string
+  description: string
+  preview: { accent: string; font: string; layout: string }
+  is_default?: boolean
+}
+
 export const resumeApi = createApi({
   reducerPath: "resumeApi",
   baseQuery: fetchBaseQuery({
@@ -22,7 +30,7 @@ export const resumeApi = createApi({
     }),
     rewriteBullets: builder.mutation<
       { rewritten_bullets: string[] },
-      { original_bullets: string[]; job_description: string }
+      { original_bullets: string[]; job_description: string; template?: string }
     >({
       query: (body) => ({
         url: "/api/tailor/rewrite-bullets",
@@ -32,7 +40,7 @@ export const resumeApi = createApi({
     }),
     generateSummary: builder.mutation<
       { summary: string },
-      { resume_text: string; job_description: string }
+      { resume_text: string; job_description: string; template?: string }
     >({
       query: (body) => ({
         url: "/api/tailor/generate-summary",
@@ -62,7 +70,7 @@ export const resumeApi = createApi({
     }),
     chatEdit: builder.mutation<
       { assistant_message: string; updated_resume: Resume },
-      { resume: Resume; job_description: string; messages: any[]; user_message: string }
+      { resume: Resume; job_description: string; messages: any[]; user_message: string; template?: string }
     >({
       query: (body) => ({
         url: "/api/tailor/chat-edit",
@@ -85,13 +93,18 @@ export const resumeApi = createApi({
     }),
     generateCoverLetter: builder.mutation<
       { cover_letter: string },
-      { resume: Resume; job_description: string }
+      { resume: Resume; job_description: string; template?: string }
     >({
       query: (body) => ({
         url: "/api/tailor/cover-letter",
         method: "POST",
         body,
       }),
+    }),
+    getTemplates: builder.query<TemplateInfo[], void>({
+      query: () => "/api/export/templates",
+      // Template catalogue rarely changes during a session
+      keepUnusedDataFor: 60 * 60,
     }),
   }),
 })
@@ -106,4 +119,5 @@ export const {
   useSaveVersionMutation,
   useGetVersionsQuery,
   useGenerateCoverLetterMutation,
+  useGetTemplatesQuery,
 } = resumeApi
