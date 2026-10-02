@@ -21,7 +21,7 @@ import {
 } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User, MessageSquare } from "lucide-react"
+import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User, MessageSquare, AlertTriangle } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
 import { ScoreBreakdownCard } from "./ScoreBreakdownCard"
 import { CoverLetterModal } from "./CoverLetterModal"
@@ -162,6 +162,7 @@ export function TailorView() {
   const [atsData, setAtsData] = useState<any>(null)
   const [gapData, setGapData] = useState<any>(null)
   const [reviewData, setReviewData] = useState<any>(null)
+  const [pipelineErrors, setPipelineErrors] = useState<string[]>([])
   const [showCoverLetter, setShowCoverLetter] = useState(false)
   const [showChatEditor, setShowChatEditor] = useState(false)
   const [showInterview, setShowInterview] = useState(false)
@@ -206,10 +207,13 @@ export function TailorView() {
       setAtsData((prev: any) => data.ats_score ?? prev)
       setGapData((prev: any) => data.gap_report ?? prev)
       setReviewData((prev: any) => data.review ?? prev)
+      setPipelineErrors(data.errors ?? [])
       if (data.errors?.length) console.warn("Pipeline stage errors:", data.errors)
       lastScoredKeyRef.current = key
     } catch (err) {
       console.error(err)
+      const detail = (err as any)?.data?.detail
+      setPipelineErrors([typeof detail === "string" ? detail : "Analysis failed. Please try again."])
     } finally {
       inFlightRef.current = false
     }
@@ -1096,6 +1100,23 @@ export function TailorView() {
           {/* Right column: ATS insights */}
           <div className="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto lg:pl-1 lg:pb-2 custom-scrollbar">
             <JobDescriptionCard text={jobDescription} />
+
+            {/* Stage failures (e.g. AI rate limits) — never leave the panels blank without a reason */}
+            {pipelineErrors.length > 0 && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="font-medium">Some analysis results are unavailable:</p>
+                    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                      {pipelineErrors.slice(0, 5).map((msg, i) => (
+                        <li key={i} className="break-words">{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* ATS score — the headline metric */}
             {isScoring && !atsData ? (
