@@ -13,6 +13,11 @@ async def parse_resume_text(raw_text: str) -> Resume:
     'location' is the candidate's home city/area (not per-job locations); set it to null when absent.
     Structure the experience, education, projects, and skills clearly.
     Extract any personal, academic, or open-source projects into 'projects'. If the resume has no projects, output an empty list.
+    STRICT FACTUAL RULES - hallucinated data is the worst possible failure:
+    - Extract ONLY information literally present in the document. Never infer, guess, or complete missing data.
+    - Never invent employers, dates, degrees, skills, metrics, links or contact details - not even plausible ones.
+    - If a field is absent, illegible or ambiguous, set it to null (or [] for lists). An empty result is always better than a guess.
+    - When unsure between two readings of messy text, prefer the literal characters on the page, or leave the field null.
     Output MUST be a valid JSON object with the following exact structure:
     {
       "name": "John Doe",

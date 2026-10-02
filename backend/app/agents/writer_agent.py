@@ -1,5 +1,6 @@
 from app.services.llm_client import llm
 from app.services.template_registry import get_template
+from app.services.fact_guard import generate_text_guarded, unsupported_numbers
 import json
 import logging
 
@@ -23,6 +24,7 @@ Rewrite every bullet so it:
 2. States the action, the method/scope, and a measurable result whenever the original bullet supports one (%, $, headcount, latency, volume, time saved). NEVER invent numbers, tools, employers or titles that are not in the original bullet.
 3. Uses keywords and phrasing from the job description, but only where the original bullet genuinely supports them.
 4. Reads as one line of roughly 12-22 words: no first-person pronouns, no bullet symbols ("-"), no trailing period, no restating the job title.
+5. FACTS COME ONLY FROM THE ORIGINAL BULLET. If you cannot improve a bullet without inventing a fact, return that bullet unchanged. If you are unsure whether a detail is supported, keep the original wording.
 
 {_style_block(template)}
 
@@ -43,7 +45,17 @@ ORIGINAL BULLETS:
     if len(rewritten) != len(original_bullets):
         logger.warning(f"Bullet count mismatch ({len(rewritten)} vs {len(original_bullets)}); falling back to input")
         return original_bullets
-    return [str(b) for b in rewritten]
+
+    # Hallucination guard: a rewrite may not introduce numbers absent from the original bullet
+    guarded = []
+    for original, new in zip(original_bullets, rewritten):
+        invented = unsupported_numbers(str(new), original)
+        if invented:
+            logger.warning("Bullet rewrite introduced unsupported numbers %s; keeping original bullet", invented)
+            guarded.append(original)
+        else:
+            guarded.append(str(new))
+    return guarded
 
 
 async def generate_summary(
@@ -59,6 +71,8 @@ Requirements:
 - Sentence 2-3: 2-3 hard skills that (a) the job description asks for and (b) are actually supported by the resume context.
 - Sentence 4 (optional): one differentiator with a concrete result or scale.
 - Tailor every claim to the job description; only use skills and experience found in the resume context - do not invent.
+- Every number (%, $, headcount, years) must appear in the resume context or the job description. Never fabricate metrics.
+- If you are unsure whether a claim is supported by the resume, leave it out.
 - No headers, no bullet points, no pronouns ("I", "my"), no cliches ("passionate go-getter"), no placeholder text.
 
 {_style_block(template)}
@@ -71,7 +85,7 @@ RESUME CONTEXT:
 {resume_text}"""
 
     logger.info(f"Generating summary using LLM (template={get_template(template).id})...")
-    return await llm.generate_text(system_prompt, user_prompt)
+    return await generate_text_guarded(system_prompt, user_prompt, resume_text, job_description)
 
 
 async def generate_cover_letter(
@@ -89,6 +103,8 @@ Requirements:
   4. Closing: confident call to action - availability and enthusiasm, no begging.
 - Use first name only if the resume gives it; never add placeholders like [Your Name], [Date] or [Company] beyond the employer named in the job description.
 - Concrete evidence from the resume only - no invented metrics, titles or employers.
+- Every number must appear in the resume context or the job description; never fabricate figures, dates or scale.
+- If unsure whether an achievement is supported by the resume, do not include it.
 - Output only the letter text: no headings, no address/date block, no signature. A single greeting line ("Dear Hiring Manager,") is fine; never use bracketed placeholders.
 
 {_style_block(template)}
@@ -101,4 +117,4 @@ RESUME CONTEXT:
 {resume_text}"""
 
     logger.info(f"Generating cover letter using LLM (template={get_template(template).id})...")
-    return await llm.generate_text(system_prompt, user_prompt)
+    return await generate_text_guarded(system_prompt, user_prompt, resume_text, job_description)

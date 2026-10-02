@@ -4,7 +4,6 @@ from app.agents.parser_agent import parse_resume_text
 from app.schemas.resume import Resume
 from app.schemas.analysis import SaveVersionRequest
 from app.services.storage import save_version, get_versions, get_version
-from app.db.database import get_db
 from app.utils.http_errors import internal_error
 import logging
 
@@ -27,14 +26,11 @@ async def upload_resume(file: UploadFile = File(...)):
             raise HTTPException(status_code=413, detail="File too large. Maximum upload size is 10 MB.")
     content = bytes(buf)
 
-    logger.info(f"Uploading and parsing file: {filename}")
+    # Privacy: log only size and type, never the filename (often contains the person's name)
+    logger.info(f"Parsing resume upload ({filename.rsplit('.', 1)[-1].lower()}, {len(content) / 1024:.1f} KB)")
     try:
         raw_text = extract_text(content, filename)
         resume_obj = await parse_resume_text(raw_text)
-
-        db = await get_db()
-        await db.resumes.insert_one(resume_obj.model_dump())
-
         return resume_obj
     except Exception as e:
         raise internal_error(e)
