@@ -174,7 +174,7 @@
     {% if exp.description %}
     <ul>
       {% for bullet in exp.description %}
-      <li>{{ bullet }}</li>
+      {% if bullet | trim %}<li>{{ bullet }}</li>{% endif %}
       {% endfor %}
     </ul>
     {% endif %}
@@ -185,6 +185,7 @@
   {% if resume.projects %}
   <h2>Projects</h2>
   {% for proj in resume.projects %}
+  {% if proj.name or proj.description %}
   <div class="entry">
     <table class="job-header">
       <tr>
@@ -200,11 +201,12 @@
     {% if proj.description %}
     <ul>
       {% for bullet in proj.description %}
-      <li>{{ bullet }}</li>
+      {% if bullet | trim %}<li>{{ bullet }}</li>{% endif %}
       {% endfor %}
     </ul>
     {% endif %}
   </div>
+  {% endif %}
   {% endfor %}
   {% endif %}
 

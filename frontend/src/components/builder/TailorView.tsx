@@ -684,6 +684,15 @@ export function TailorView() {
                     />
                   </label>
                   <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    Location
+                    <Input
+                      value={resume.location || ""}
+                      onChange={(e) => dispatch(updateContact({ location: e.target.value }))}
+                      placeholder="Berlin, Germany"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
                     LinkedIn
                     <Input
                       value={resume.linkedin || ""}

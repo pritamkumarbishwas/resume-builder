@@ -31,6 +31,7 @@ class Resume(BaseModel):
     title: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    location: Optional[str] = None
     linkedin: Optional[str] = None
     portfolio: Optional[str] = None
     summary: str

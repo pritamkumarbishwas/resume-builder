@@ -26,6 +26,7 @@ JSON structure (all fields required unless noted optional):
     "title": "Senior Software Engineer",
     "email": "john@example.com",
     "phone": "123-456-7890",
+    "location": "Berlin, Germany",
     "linkedin": "linkedin.com/in/johndoe",
     "portfolio": null,
     "summary": "Experienced engineer...",
@@ -103,8 +104,13 @@ USER REQUEST:
         data = await llm.generate_json(system_prompt, user_prompt)
         assistant_message = data.get("assistant_message", "I have updated your resume as requested.")
         updated_data = data.get("updated_resume") or resume.model_dump()
-        if "projects" not in updated_data:
-            updated_data["projects"] = [p.model_dump() for p in resume.projects]
+        if isinstance(updated_data, dict):
+            # The model sometimes omits optional fields it wasn't asked to touch —
+            # restore the originals instead of silently blanking them.
+            for key in ("title", "email", "phone", "location", "linkedin", "portfolio"):
+                updated_data.setdefault(key, getattr(resume, key))
+            if "projects" not in updated_data:
+                updated_data["projects"] = [p.model_dump() for p in resume.projects]
         updated_resume = Resume(**updated_data)
         return ChatEditResponse(assistant_message=assistant_message, updated_resume=updated_resume)
     except Exception as e:

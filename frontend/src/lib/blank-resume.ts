@@ -6,6 +6,7 @@ export function createBlankResume(): Resume {
     title: "",
     email: "",
     phone: "",
+    location: "",
     linkedin: "",
     portfolio: "",
     summary: "",
