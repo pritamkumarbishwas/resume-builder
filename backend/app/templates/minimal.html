@@ -1,43 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="utf-8">
+  <title>{{ resume.name }} - Resume</title>
   <style>
     @page {
       size: letter;
-      margin: 1.6cm;
+      margin: 1.7cm 1.8cm;
     }
 
     body {
-      font-family: "Arial", "Helvetica", sans-serif;
-      line-height: 1.35;
-      color: #222;
-      font-size: 10.5pt;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      line-height: 1.4;
+      color: #262626;
+      font-size: 10pt;
+      margin: 0;
     }
 
+    /* ---------- Header ---------- */
     h1 {
-      font-size: 18pt;
-      margin-bottom: 3px;
-      color: #111;
+      font-size: 22pt;
+      margin: 0 0 4px 0;
+      color: #000;
       font-weight: bold;
+      letter-spacing: -0.3px;
+    }
+
+    .headline {
+      font-size: 11pt;
+      color: #555;
+      margin-bottom: 4px;
     }
 
     .contact {
-      font-size: 9.5pt;
-      margin-bottom: 14px;
-      color: #444;
+      font-size: 9pt;
+      margin-bottom: 8px;
+      color: #666;
     }
 
+    /* ---------- Sections: label in the margin style ---------- */
     h2 {
-      font-size: 11pt;
-      margin-top: 14px;
-      margin-bottom: 6px;
-      border-top: 1px solid #999;
-      padding-top: 6px;
-      text-transform: uppercase;
-      color: #111;
+      font-size: 9pt;
+      margin: 16px 0 6px 0;
+      padding-top: 7px;
+      border-top: 1px solid #d4d4d4;
+      color: #000;
       font-weight: bold;
-      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      page-break-after: avoid;
     }
 
     p {
@@ -45,54 +57,70 @@
       text-align: left;
     }
 
-    .job-header {
+    .entry {
+      margin-bottom: 8px;
+      page-break-inside: avoid;
+    }
+
+    table.job-header {
       width: 100%;
-      margin-top: 8px;
+      border-collapse: collapse;
+      margin-top: 6px;
       margin-bottom: 2px;
+    }
+
+    table.job-header td {
+      padding: 0;
+      vertical-align: top;
     }
 
     .job-title {
       font-weight: bold;
-      font-size: 11pt;
-      color: #111;
+      font-size: 10.5pt;
+      color: #000;
     }
 
     .company {
-      font-size: 10.5pt;
-      color: #333;
+      font-size: 10pt;
+      color: #555;
     }
 
     .date {
       text-align: right;
-      font-size: 9.5pt;
-      color: #555;
+      font-size: 9pt;
+      color: #777;
     }
 
     ul {
-      margin-top: 0;
-      margin-bottom: 8px;
-      padding-left: 16px;
+      margin: 2px 0 6px 0;
+      padding-left: 15px;
     }
 
     li {
-      margin-bottom: 3px;
+      margin-bottom: 2px;
+    }
+
+    .edu-extra {
+      font-size: 9pt;
+      color: #777;
     }
 
     .skills-item {
       margin-bottom: 3px;
-      font-size: 10.5pt;
+    }
+
+    .skills-item strong {
+      color: #000;
     }
   </style>
 </head>
 
 <body>
+  {% set contact_items = [resume.email, resume.phone, resume.location, resume.linkedin, resume.portfolio] | select |
+  list %}
   <h1>{{ resume.name }}</h1>
-  <div class="contact">
-    {{ resume.email }}
-    {% if resume.phone %} &middot; {{ resume.phone }}{% endif %}
-    {% if resume.linkedin %} &middot; {{ resume.linkedin }}{% endif %}
-    {% if resume.portfolio %} &middot; {{ resume.portfolio }}{% endif %}
-  </div>
+  {% if resume.title %}<div class="headline">{{ resume.title }}</div>{% endif %}
+  {% if contact_items %}<div class="contact">{{ contact_items | join(' &nbsp;/&nbsp; ' | safe) }}</div>{% endif %}
 
   {% if resume.summary %}
   <h2>Summary</h2>
@@ -102,59 +130,72 @@
   {% if resume.experiences %}
   <h2>Experience</h2>
   {% for exp in resume.experiences %}
-  <table class="job-header">
-    <tr>
-      <td style="width: 72%; text-align: left;">
-        <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">- {{ exp.company }}</span>{% endif %}
-      </td>
-      <td style="width: 28%;" class="date">
-        {{ exp.start_date }} - {{ exp.end_date }}
-      </td>
-    </tr>
-  </table>
-  <ul>
-    {% for bullet in exp.description %}
-    <li>{{ bullet }}</li>
-    {% endfor %}
-  </ul>
+  <div class="entry">
+    <table class="job-header">
+      <tr>
+        <td style="width: 72%; text-align: left;">
+          <span class="job-title">{{ exp.title }}</span>{% if exp.company %} <span class="company">- {{ exp.company }}{%
+            if exp.location %}, {{ exp.location }}{% endif %}</span>{% endif %}
+        </td>
+        <td style="width: 28%;" class="date">
+          {{ exp.start_date }} - {{ exp.end_date or 'Present' }}
+        </td>
+      </tr>
+    </table>
+    {% if exp.description %}
+    <ul>
+      {% for bullet in exp.description %}
+      <li>{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
   {% endfor %}
   {% endif %}
 
   {% if resume.projects %}
   <h2>Projects</h2>
   {% for proj in resume.projects %}
-  <table class="job-header">
-    <tr>
-      <td style="width: 72%; text-align: left;">
-        <span class="job-title">{{ proj.name }}</span>
-        {% if proj.technologies %}<span class="company"> - {{ proj.technologies | join(', ') }}</span>{% endif %}
-      </td>
-      <td style="width: 28%;" class="date">
-        {% if proj.link %}{{ proj.link }}{% endif %}
-      </td>
-    </tr>
-  </table>
-  <ul>
-    {% for bullet in proj.description %}
-    <li>{{ bullet }}</li>
-    {% endfor %}
-  </ul>
+  <div class="entry">
+    <table class="job-header">
+      <tr>
+        <td style="width: 72%; text-align: left;">
+          <span class="job-title">{{ proj.name }}</span>
+          {% if proj.technologies %}<span class="company"> - {{ proj.technologies | join(', ') }}</span>{% endif %}
+        </td>
+        <td style="width: 28%;" class="date">
+          {% if proj.link %}{{ proj.link }}{% endif %}
+        </td>
+      </tr>
+    </table>
+    {% if proj.description %}
+    <ul>
+      {% for bullet in proj.description %}
+      <li>{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
   {% endfor %}
   {% endif %}
 
   {% if resume.education %}
   <h2>Education</h2>
   {% for edu in resume.education %}
-  <table class="job-header">
-    <tr>
-      <td style="width: 72%; text-align: left;">
-        <span class="job-title">{{ edu.degree }}</span>{% if edu.institution %} <span class="company">- {{ edu.institution }}</span>{% endif %}
-      </td>
-      <td style="width: 28%;" class="date">
-        {{ edu.graduation_date }}
-      </td>
-    </tr>
-  </table>
+  <div class="entry">
+    <table class="job-header">
+      <tr>
+        <td style="width: 72%; text-align: left;">
+          <span class="job-title">{{ edu.degree }}</span>{% if edu.institution %} <span class="company">- {{
+            edu.institution }}</span>{% endif %}
+        </td>
+        <td style="width: 28%;" class="date">
+          {{ edu.graduation_date }}
+        </td>
+      </tr>
+    </table>
+    {% if edu.gpa %}<div class="edu-extra">GPA: {{ edu.gpa }}</div>{% endif %}
+  </div>
   {% endfor %}
   {% endif %}
 

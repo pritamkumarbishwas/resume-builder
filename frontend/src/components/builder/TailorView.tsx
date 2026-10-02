@@ -1118,7 +1118,12 @@ export function TailorView() {
             {isScoring && !reviewData ? (
               <PanelSkeleton label="Checking grammar, tone & length..." />
             ) : reviewData ? (
-              <QualityChecksPanel review={reviewData} updating={isScoring} />
+              <QualityChecksPanel
+                review={reviewData}
+                resume={resume}
+                jobDescription={jobDescription}
+                updating={isScoring}
+              />
             ) : null}
           </div>
         </div>

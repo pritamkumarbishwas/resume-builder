@@ -1,8 +1,16 @@
-import { AlertCircle, CheckCircle2, XCircle, ShieldCheck, Lightbulb } from "lucide-react"
+import { useState } from "react"
+import { AlertCircle, CheckCircle2, XCircle, ShieldCheck, Lightbulb, Sparkles, Check, Loader2 } from "lucide-react"
+import { useAppSelector } from "@/store/hooks"
+import { useChatEditMutation } from "@/store/api/resume-api"
 import type { ReviewReport, QualityCheck } from "@/store/api/resume-api"
+import { setResume } from "@/store/slices/resume-slice"
+import type { Resume } from "@/store/slices/resume-slice"
+import { useAppDispatch } from "@/store/hooks"
 
 interface QualityChecksPanelProps {
   review: ReviewReport | null
+  resume: Resume
+  jobDescription: string
   updating?: boolean
 }
 
@@ -36,10 +44,27 @@ const SEVERITY_STYLES: Record<string, string> = {
   low: "border-border/60 bg-muted/50 text-muted-foreground",
 }
 
-export function QualityChecksPanel({ review, updating = false }: QualityChecksPanelProps) {
+const checkKey = (c: QualityCheck, i: number) => `${c.category}:${c.target}:${i}`
+
+export function QualityChecksPanel({ review, resume, jobDescription, updating = false }: QualityChecksPanelProps) {
+  const dispatch = useAppDispatch()
+  const template = useAppSelector((state) => state.resume.template)
+  const [chatEdit, { isLoading: isFixing }] = useChatEditMutation()
+
+  // State is tagged with the review object it belongs to: when the auto-pipeline
+  // delivers a fresh review, marks/spinners reset without needing an effect.
+  const [pending, setPending] = useState<{ review: ReviewReport; key: string } | null>(null)
+  const [fixedState, setFixedState] = useState<{ review: ReviewReport; keys: string[] } | null>(null)
+  const [errorState, setErrorState] = useState<{ review: ReviewReport; msg: string } | null>(null)
+
   if (!review) return null
 
+  const pendingKey = pending && pending.review === review ? pending.key : null
+  const fixedKeys = fixedState && fixedState.review === review ? fixedState.keys : []
+  const errorMsg = errorState && errorState.review === review ? errorState.msg : null
+
   const checks = review.checks ?? []
+  const fixable = checks.filter((c) => c.status !== "pass")
   const counts = checks.reduce(
     (acc, c) => {
       acc[c.status] += 1
@@ -47,6 +72,52 @@ export function QualityChecksPanel({ review, updating = false }: QualityChecksPa
     },
     { pass: 0, warn: 0, fail: 0 },
   )
+
+  const applyFix = async (message: string, key: string) => {
+    setErrorState(null)
+    setPending({ review, key })
+    try {
+      const res = await chatEdit({
+        resume,
+        job_description: jobDescription,
+        messages: [],
+        user_message: message,
+        template,
+      }).unwrap()
+      dispatch(setResume(res.updated_resume))
+      // The auto-pipeline re-scores the resume; marks stay visible until the
+      // fresh review arrives (then they reset via the review-identity check).
+      setFixedState((prev) => ({
+        review,
+        keys: key === "__all__" ? checks.map((c, i) => checkKey(c, i)) : [...(prev && prev.review === review ? prev.keys : []), key],
+      }))
+    } catch (err) {
+      console.error("Fix failed:", err)
+      setErrorState({ review, msg: "Could not apply the fix. Please try again." })
+    } finally {
+      setPending(null)
+    }
+  }
+
+  const handleFixOne = (check: QualityCheck, key: string) =>
+    applyFix(
+      `Apply this single resume quality fix and change nothing else.\n` +
+        `Section/target: "${check.target}"\n` +
+        `Category: ${check.category}\n` +
+        `Problem and required change: ${check.detail}\n` +
+        `Keep every other word of the resume identical.`,
+      key,
+    )
+
+  const handleFixAll = () =>
+    applyFix(
+      `Apply all of the following resume quality fixes, and nothing else. ` +
+        `Keep every part of the resume that is not listed below identical:\n` +
+        fixable.map((c) => `- [${c.category}] ${c.target}: ${c.detail}`).join("\n"),
+      "__all__",
+    )
+
+  const isPending = (key: string) => pendingKey === key
 
   return (
     <section
@@ -77,8 +148,8 @@ export function QualityChecksPanel({ review, updating = false }: QualityChecksPa
         </div>
       </div>
 
-      {/* Status tally */}
-      <div className="mb-3 flex gap-1.5">
+      {/* Status tally + fix-all */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES.pass.chip} ${STATUS_STYLES.pass.text}`}>
           <CheckCircle2 className="h-3 w-3" aria-hidden="true" /> {counts.pass} pass
         </span>
@@ -88,7 +159,28 @@ export function QualityChecksPanel({ review, updating = false }: QualityChecksPa
         <span className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES.fail.chip} ${STATUS_STYLES.fail.text}`}>
           <XCircle className="h-3 w-3" aria-hidden="true" /> {counts.fail} fail
         </span>
+        {fixable.length > 0 && (
+          <button
+            type="button"
+            onClick={handleFixAll}
+            disabled={isFixing}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending("__all__") ? (
+              <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles className="h-3 w-3" aria-hidden="true" />
+            )}
+            {isPending("__all__") ? "Fixing…" : `Fix all (${fixable.length})`}
+          </button>
+        )}
       </div>
+
+      {errorMsg && (
+        <p role="alert" className="mb-2 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-600 dark:text-rose-400">
+          {errorMsg}
+        </p>
+      )}
 
       {/* Checks */}
       {checks.length > 0 ? (
@@ -96,14 +188,40 @@ export function QualityChecksPanel({ review, updating = false }: QualityChecksPa
           {checks.map((check, i) => {
             const s = STATUS_STYLES[check.status]
             const Icon = s.icon
+            const key = checkKey(check, i)
+            const isFixed = fixedKeys.includes(key)
+            const pendingHere = isPending(key)
             return (
-              <li key={i} className="rounded-xl border border-border/50 bg-background/40 p-2.5">
+              <li key={key} className="rounded-xl border border-border/50 bg-background/40 p-2.5">
                 <div className="flex items-center gap-1.5">
                   <Icon className={`h-3.5 w-3.5 shrink-0 ${s.text}`} aria-hidden="true" />
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {CATEGORY_LABELS[check.category]}
                   </span>
                   <span className="text-[11px] text-muted-foreground/70">· {check.target}</span>
+                  {check.status !== "pass" && (
+                    <span className="ml-auto">
+                      {isFixed ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <Check className="h-3 w-3" aria-hidden="true" /> Fixed · rescoring
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleFixOne(check, key)}
+                          disabled={isFixing}
+                          className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {pendingHere ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Sparkles className="h-3 w-3" aria-hidden="true" />
+                          )}
+                          {pendingHere ? "Fixing…" : "Apply fix"}
+                        </button>
+                      )}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-xs leading-snug text-foreground/80">{check.detail}</p>
               </li>
