@@ -11,6 +11,42 @@ export interface TemplateInfo {
   is_default?: boolean
 }
 
+export interface QualityCheck {
+  category: "grammar" | "tone" | "length"
+  target: string
+  status: "pass" | "warn" | "fail"
+  detail: string
+}
+
+export interface ReviewReport {
+  overall_quality_score: number
+  summary_feedback: string
+  bullet_feedback: { original: string; issue: string; suggestion: string; severity: "high" | "medium" | "low" }[]
+  general_tips: string[]
+  checks: QualityCheck[]
+}
+
+export interface PipelineResult {
+  ats_score: { score: number; matching_keywords: string[]; missing_keywords: string[]; recommendations: string[] } | null
+  jd_analysis: any
+  gap_report: any
+  review: ReviewReport | null
+  errors: string[]
+}
+
+export interface InterviewQuestion {
+  question: string
+  category: "behavioral" | "technical" | "role_specific" | "gap_close"
+  difficulty: "easy" | "medium" | "hard"
+  why_asked: string
+  answer_hint: string
+}
+
+export interface InterviewPlan {
+  questions: InterviewQuestion[]
+  strategy_tips: string[]
+}
+
 export const resumeApi = createApi({
   reducerPath: "resumeApi",
   baseQuery: fetchBaseQuery({
@@ -106,6 +142,23 @@ export const resumeApi = createApi({
       // Template catalogue rarely changes during a session
       keepUnusedDataFor: 60 * 60,
     }),
+    runPipeline: builder.mutation<PipelineResult, { resume: Resume; job_description: string }>({
+      query: (body) => ({
+        url: "/api/analyze/pipeline",
+        method: "POST",
+        body,
+      }),
+    }),
+    generateInterviewQuestions: builder.mutation<
+      InterviewPlan,
+      { resume: Resume; job_description: string; count?: number }
+    >({
+      query: (body) => ({
+        url: "/api/interview/questions",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 })
 
@@ -120,4 +173,6 @@ export const {
   useGetVersionsQuery,
   useGenerateCoverLetterMutation,
   useGetTemplatesQuery,
+  useRunPipelineMutation,
+  useGenerateInterviewQuestionsMutation,
 } = resumeApi

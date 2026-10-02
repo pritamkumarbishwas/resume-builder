@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.api.routes import resume, job, tailor, export, analyze
+from app.api.routes import resume, job, tailor, export, analyze, interview
 from app.db.database import db_instance
 
 @asynccontextmanager
@@ -31,6 +31,7 @@ app.include_router(job.router, prefix="/api/job", tags=["job"])
 app.include_router(tailor.router, prefix="/api/tailor", tags=["tailor"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 app.include_router(analyze.router, prefix="/api/analyze", tags=["analyze"])
+app.include_router(interview.router, prefix="/api/interview", tags=["interview"])
 
 @app.get("/")
 def health_check():

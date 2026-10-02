@@ -93,15 +93,61 @@ class BulletFeedback(BaseModel):
     suggestion: str
     severity: Literal["high", "medium", "low"]
 
+class QualityCheck(BaseModel):
+    """One grammar / tone / length verdict for a piece of resume text."""
+    category: Literal["grammar", "tone", "length"]
+    target: str                                   # e.g. "Summary", "Experience 1, bullet 2"
+    status: Literal["pass", "warn", "fail"]
+    detail: str                                   # what is wrong (or why it is fine) + how to fix it
+
 class ReviewReport(BaseModel):
     overall_quality_score: int
     summary_feedback: str
     bullet_feedback: List[BulletFeedback] = Field(default_factory=list)
     general_tips: List[str] = Field(default_factory=list)
+    checks: List[QualityCheck] = Field(default_factory=list)
 
 class ReviewRequest(BaseModel):
     resume: Resume
     job_description: str
+
+
+# ── Phase 3: Multi-agent pipeline ───────────────────────────────────────────
+
+class PipelineRequest(BaseModel):
+    resume: Resume
+    job_description: str
+
+class PipelineResult(BaseModel):
+    """Combined output of the analyzer / matcher / reviewer agents.
+
+    Each stage is independent: a failing agent lands in `errors` instead of
+    taking down the whole response, so the UI always gets what succeeded.
+    """
+    ats_score: Optional[ATSScoreResponse] = None
+    jd_analysis: Optional[JDAnalysis] = None
+    gap_report: Optional[GapReport] = None
+    review: Optional[ReviewReport] = None
+    errors: List[str] = Field(default_factory=list)
+
+
+# ── Phase 3: Mock interview ─────────────────────────────────────────────────
+
+class InterviewQuestion(BaseModel):
+    question: str
+    category: Literal["behavioral", "technical", "role_specific", "gap_close"]
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
+    why_asked: str = ""                           # what the interviewer is probing
+    answer_hint: str = ""                         # which resume/JD evidence to draw on
+
+class InterviewPlan(BaseModel):
+    questions: List[InterviewQuestion] = Field(default_factory=list)
+    strategy_tips: List[str] = Field(default_factory=list)
+
+class InterviewRequest(BaseModel):
+    resume: Resume
+    job_description: str
+    count: Optional[int] = 10                     # 5-15 questions
 
 
 # ── Phase 2: Version History ─────────────────────────────────────────────────

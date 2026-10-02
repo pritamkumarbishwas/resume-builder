@@ -1,11 +1,28 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.analysis import ATSScoreRequest, ATSScoreResponse, JDAnalyzeRequest, GapReportRequest, ReviewRequest
+from app.schemas.analysis import (
+    ATSScoreRequest,
+    ATSScoreResponse,
+    JDAnalyzeRequest,
+    GapReportRequest,
+    ReviewRequest,
+    PipelineRequest,
+    PipelineResult,
+)
 from app.services.ats_scorer import score_resume
 from app.agents.jd_analyzer import analyze_jd
 from app.agents.matcher import analyze_gaps
 from app.agents.reviewer_agent import review_resume
+from app.agents.orchestrator import run_pipeline
 
 router = APIRouter()
+
+@router.post("/pipeline", response_model=PipelineResult)
+async def run_analysis_pipeline(req: PipelineRequest):
+    """Multi-agent run: JD analyzer + gap matcher + ATS scorer + reviewer."""
+    try:
+        return await run_pipeline(req.resume, req.job_description)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/ats-score", response_model=ATSScoreResponse)
 async def get_ats_score(req: ATSScoreRequest):

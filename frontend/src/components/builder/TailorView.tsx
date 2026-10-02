@@ -4,7 +4,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import {
   useRewriteBulletsMutation,
   useGenerateSummaryMutation,
-  useGetAtsScoreMutation
+  useRunPipelineMutation
 } from "@/store/api/resume-api"
 import { API_BASE_URL } from "@/store/api/resume-api"
 import {
@@ -21,17 +21,19 @@ import {
 } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User } from "lucide-react"
+import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User, MessageSquare } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
 import { ScoreBreakdownCard } from "./ScoreBreakdownCard"
 import { CoverLetterModal } from "./CoverLetterModal"
 import { GapAnalysisPanel } from "./GapAnalysisPanel"
+import { QualityChecksPanel } from "./QualityChecksPanel"
+import { InterviewModal } from "./InterviewModal"
 import { ChatEditorModal } from "./ChatEditorModal"
 import { JobDescriptionCard } from "./JobDescriptionCard"
 import { ProjectsSection } from "./ProjectsSection"
 import { EducationSection } from "./EducationSection"
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
-import { useGetGapReportMutation, useSaveVersionMutation, useGetVersionsQuery, useGetTemplatesQuery } from "@/store/api/resume-api"
+import { useSaveVersionMutation, useGetVersionsQuery, useGetTemplatesQuery } from "@/store/api/resume-api"
 import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
 import { computeScoreBreakdown } from "@/lib/score-breakdown"
 import { setResume, setJobDescription, setTemplate } from "@/store/slices/resume-slice"
@@ -152,14 +154,16 @@ export function TailorView() {
 
   const [rewriteBullets, { isLoading: isRewriting }] = useRewriteBulletsMutation()
   const [generateSummary, { isLoading: isGenerating }] = useGenerateSummaryMutation()
-  const [getAtsScore, { isLoading: isScoring }] = useGetAtsScoreMutation()
+  const [runPipeline, { isLoading: isScoring }] = useRunPipelineMutation()
 
   const [activeExpIndex, setActiveExpIndex] = useState<number | null>(null)
   const [copiedExpIndex, setCopiedExpIndex] = useState<number | null>(null)
   const [atsData, setAtsData] = useState<any>(null)
   const [gapData, setGapData] = useState<any>(null)
+  const [reviewData, setReviewData] = useState<any>(null)
   const [showCoverLetter, setShowCoverLetter] = useState(false)
   const [showChatEditor, setShowChatEditor] = useState(false)
+  const [showInterview, setShowInterview] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [skillEdit, setSkillEdit] = useState<SkillEdit | null>(null)
   const [skillDraft, setSkillDraft] = useState("")
@@ -168,7 +172,6 @@ export function TailorView() {
   // Dummy session ID for now
   const sessionId = "session-123"
 
-  const [getGapReport, { isLoading: isGapLoading }] = useGetGapReportMutation()
   const [saveVersion] = useSaveVersionMutation()
   const { data: versions, refetch: refetchVersions } = useGetVersionsQuery(sessionId)
 
@@ -196,33 +199,37 @@ export function TailorView() {
 
     inFlightRef.current = true
     try {
-      const data = await getAtsScore({ resume: r, job_description: jd }).unwrap()
-      setAtsData(data)
-      // Also fetch gap report
-      try {
-        const gaps = await getGapReport({ resume: r, job_description: jd }).unwrap()
-        setGapData(gaps)
-      } catch (err) {
-        console.error("Failed to fetch gap report", err)
-      }
+      // One request runs all agents (JD analyzer, matcher, ATS scorer, reviewer).
+      // Functional updates keep the previous value when a stage failed/omitted.
+      const data = await runPipeline({ resume: r, job_description: jd }).unwrap()
+      setAtsData((prev: any) => data.ats_score ?? prev)
+      setGapData((prev: any) => data.gap_report ?? prev)
+      setReviewData((prev: any) => data.review ?? prev)
+      if (data.errors?.length) console.warn("Pipeline stage errors:", data.errors)
       lastScoredKeyRef.current = key
     } catch (err) {
       console.error(err)
     } finally {
       inFlightRef.current = false
-      if (needsRescoreRef.current) {
-        needsRescoreRef.current = false
-        void runAtsScore()
-      }
     }
-  }, [getAtsScore])
+  }, [runPipeline])
+
+  // Re-run if edits arrived while the previous pipeline call was in flight
+  // (queued via needsRescoreRef at the top of runAtsScore)
+  useEffect(() => {
+    if (!isScoring && needsRescoreRef.current && !inFlightRef.current) {
+      needsRescoreRef.current = false
+      void runAtsScore()
+    }
+  }, [isScoring, runAtsScore])
 
   // Debounced ATS rescore on resume/JD changes (skips StrictMode double-mount via cleanup)
   useEffect(() => {
     if (!resume || !jobDescription) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    // 2.5s of quiet before rescoring: each run costs 2 LLM calls and the
-    // model has a tight TPM rate limit, so avoid firing on typing pauses
+    // 2.5s of quiet before rescoring: one pipeline run = 3 parallel LLM calls
+    // (gap matcher, ATS scorer, reviewer) and the model has a tight TPM rate
+    // limit, so avoid firing on typing pauses
     const delay = lastScoredKeyRef.current === null ? 0 : 2500
     debounceRef.current = setTimeout(() => {
       void runAtsScore()
@@ -544,6 +551,14 @@ export function TailorView() {
             className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
             <FileText className="mr-1.5 h-3.5 w-3.5" /> Cover Letter
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowInterview(true)}
+            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
+          >
+            <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Mock Interview
           </Button>
           <TemplatePicker
             templates={templateList}
@@ -1083,7 +1098,7 @@ export function TailorView() {
             ) : null}
 
             {/* Skill gap analysis */}
-            {isGapLoading && !gapData ? (
+            {isScoring && !gapData ? (
               <PanelSkeleton label="Running gap analysis..." />
             ) : gapData ? (
               <GapAnalysisPanel
@@ -1095,8 +1110,15 @@ export function TailorView() {
                 recommendations={gapData.recommendations}
                 skills={allSkills}
                 onAddKeyword={handleAddKeyword}
-                updating={isGapLoading}
+                updating={isScoring}
               />
+            ) : null}
+
+            {/* Grammar / tone / length checks (reviewer agent) */}
+            {isScoring && !reviewData ? (
+              <PanelSkeleton label="Checking grammar, tone & length..." />
+            ) : reviewData ? (
+              <QualityChecksPanel review={reviewData} updating={isScoring} />
             ) : null}
           </div>
         </div>
@@ -1191,6 +1213,13 @@ export function TailorView() {
       <ChatEditorModal
         isOpen={showChatEditor}
         onClose={() => setShowChatEditor(false)}
+        resume={resume}
+        jobDescription={jobDescription}
+      />
+
+      <InterviewModal
+        isOpen={showInterview}
+        onClose={() => setShowInterview(false)}
         resume={resume}
         jobDescription={jobDescription}
       />
