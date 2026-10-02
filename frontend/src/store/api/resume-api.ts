@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
 import type { Resume } from "../slices/resume-slice"
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "https://resume-builder-bd5m.onrender.com"
 
 export interface TemplateInfo {
   id: string
