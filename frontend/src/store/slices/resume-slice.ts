@@ -76,6 +76,36 @@ const resumeSlice = createSlice({
         state.resume.summary = action.payload
       }
     },
+    updateContact(
+      state,
+      action: PayloadAction<Partial<Pick<Resume, "name" | "email" | "phone" | "linkedin" | "portfolio">>>,
+    ) {
+      if (state.resume) {
+        Object.assign(state.resume, action.payload)
+      }
+    },
+    addExperience(state) {
+      if (state.resume) {
+        state.resume.experiences.push({
+          title: "",
+          company: "",
+          start_date: "",
+          end_date: "Present",
+          location: "",
+          description: [""],
+        })
+      }
+    },
+    updateExperience(state, action: PayloadAction<{ index: number; experience: Experience }>) {
+      if (state.resume && state.resume.experiences[action.payload.index]) {
+        state.resume.experiences[action.payload.index] = action.payload.experience
+      }
+    },
+    removeExperience(state, action: PayloadAction<{ index: number }>) {
+      if (state.resume && state.resume.experiences[action.payload.index]) {
+        state.resume.experiences.splice(action.payload.index, 1)
+      }
+    },
     updateExperienceBullets(
       state,
       action: PayloadAction<{ index: number; bullets: string[] }>,
@@ -153,6 +183,10 @@ export const {
   setResume,
   setJobDescription,
   updateSummary,
+  updateContact,
+  addExperience,
+  updateExperience,
+  removeExperience,
   updateExperienceBullets,
   updateProject,
   addProject,

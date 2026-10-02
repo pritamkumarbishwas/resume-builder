@@ -1,7 +1,8 @@
 import { useRef, useState } from "react"
-import { UploadCloud, AlertTriangle } from "lucide-react"
+import { UploadCloud, AlertTriangle, PenLine } from "lucide-react"
 import { useUploadResumeMutation } from "@/store/api/resume-api"
 import { setResume, setStep } from "@/store/slices/resume-slice"
+import { createBlankResume } from "@/lib/blank-resume"
 import { useAppDispatch } from "@/store/hooks"
 import { Button } from "@/components/ui/button"
 
@@ -26,6 +27,11 @@ export function UploadView() {
     } catch (err) {
       console.error("Upload failed", err)
     }
+  }
+
+  const handleStartBlank = () => {
+    dispatch(setResume(createBlankResume()))
+    dispatch(setStep("JOB_DESC"))
   }
 
   return (
@@ -117,6 +123,20 @@ export function UploadView() {
             We couldn&apos;t read that file. Please try another PDF or DOCX.
           </p>
         )}
+      </div>
+
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={handleStartBlank}
+          className="rounded-full border-border/70 px-6 text-foreground/80 hover:bg-muted/60"
+        >
+          <PenLine className="mr-2 h-4 w-4" />
+          Start from a blank form
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          No resume yet? Fill in your details manually — AI tailoring works either way.
+        </p>
       </div>
 
       {/* Progress strip */}

@@ -7,9 +7,21 @@ import {
   useGetAtsScoreMutation
 } from "@/store/api/resume-api"
 import { API_BASE_URL } from "@/store/api/resume-api"
-import { updateExperienceBullets, updateSummary, updateSkillGroup, updateSkillCategory, addSkillGroup, removeSkillGroup } from "@/store/slices/resume-slice"
+import {
+  updateExperienceBullets,
+  updateSummary,
+  updateContact,
+  addExperience,
+  updateExperience,
+  removeExperience,
+  updateSkillGroup,
+  updateSkillCategory,
+  addSkillGroup,
+  removeSkillGroup,
+} from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
-import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
 import { ScoreBreakdownCard } from "./ScoreBreakdownCard"
 import { CoverLetterModal } from "./CoverLetterModal"
@@ -427,6 +439,29 @@ export function TailorView() {
     }
   }
 
+  const handleExportDocx = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/export/docx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(resume),
+      })
+      if (!res.ok) throw new Error("Export failed")
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "Tailored_Resume.docx"
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+      alert("Failed to export DOCX.")
+    }
+  }
+
   const handleSaveVersion = async () => {
     try {
       const label = prompt("Enter a label for this version (e.g. 'Tailored for Google'):")
@@ -515,6 +550,14 @@ export function TailorView() {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            onClick={handleExportDocx}
+            className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
+          >
+            <FileText className="mr-1.5 h-3.5 w-3.5" /> DOCX
+          </Button>
+          <Button
+            size="sm"
             onClick={() => handleExport("modern")}
             className="rounded-full bg-primary px-4 text-primary-foreground shadow-sm hover:bg-primary/90"
           >
@@ -576,6 +619,64 @@ export function TailorView() {
             {/* Summary Section */}
             {activeSection === "summary" && (
             <div role="tabpanel" id="section-summary" aria-labelledby="tab-summary">
+              <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6 mb-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="leading-tight">
+                    <h3 className="text-lg font-bold">Contact Details</h3>
+                    <p className="text-xs text-muted-foreground">How recruiters reach you</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    Full name
+                    <Input
+                      value={resume.name || ""}
+                      onChange={(e) => dispatch(updateContact({ name: e.target.value }))}
+                      placeholder="Jane Doe"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    Email
+                    <Input
+                      value={resume.email || ""}
+                      onChange={(e) => dispatch(updateContact({ email: e.target.value }))}
+                      placeholder="jane@example.com"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    Phone
+                    <Input
+                      value={resume.phone || ""}
+                      onChange={(e) => dispatch(updateContact({ phone: e.target.value }))}
+                      placeholder="+1 555 000 1234"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground">
+                    LinkedIn
+                    <Input
+                      value={resume.linkedin || ""}
+                      onChange={(e) => dispatch(updateContact({ linkedin: e.target.value }))}
+                      placeholder="linkedin.com/in/janedoe"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-medium text-muted-foreground sm:col-span-2">
+                    Portfolio / website
+                    <Input
+                      value={resume.portfolio || ""}
+                      onChange={(e) => dispatch(updateContact({ portfolio: e.target.value }))}
+                      placeholder="janedoe.dev"
+                      className="h-9 bg-background/60"
+                    />
+                  </label>
+                </div>
+              </div>
               <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:p-6">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -639,22 +740,67 @@ export function TailorView() {
                 <div className="space-y-6">
                   {(resume.experiences || []).length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-8 border border-dashed border-border/70 rounded-2xl">
-                      No experience entries found in this resume.
+                      No experience entries yet — add your first role below.
                     </p>
                   )}
                   {(resume.experiences || []).map((exp, idx) => (
                     <div key={idx} className="border border-border/50 bg-background/40 hover:bg-background/70 rounded-2xl p-5 sm:p-6 relative overflow-hidden group/card transition-colors duration-300">
                       <div className="absolute left-0 top-0 h-full w-1 bg-primary/70 opacity-0 group-hover/card:opacity-100 transition-opacity" aria-hidden="true" />
                       <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-base sm:text-lg text-foreground/90">{exp.title}</h4>
-                          <div className="flex flex-wrap items-center text-sm text-muted-foreground gap-2 mt-1">
-                            <span className="font-medium text-primary">{exp.company}</span>
-                            <span className="opacity-40" aria-hidden="true">•</span>
-                            <span>{exp.start_date} – {exp.end_date || "Present"}</span>
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <input
+                            value={exp.title}
+                            onChange={(e) =>
+                              dispatch(updateExperience({ index: idx, experience: { ...exp, title: e.target.value } }))
+                            }
+                            placeholder="Job title"
+                            className="w-full rounded-md bg-transparent px-1 -ml-1 text-base font-bold text-foreground/90 outline-none hover:bg-muted/40 focus:bg-background focus:ring-2 focus:ring-primary/20"
+                          />
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <input
+                              value={exp.company}
+                              onChange={(e) =>
+                                dispatch(updateExperience({ index: idx, experience: { ...exp, company: e.target.value } }))
+                              }
+                              placeholder="Company"
+                              className="min-w-0 rounded-md border border-border/50 bg-background/60 px-2 py-1 text-sm text-primary outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                            />
+                            <input
+                              value={exp.start_date}
+                              onChange={(e) =>
+                                dispatch(updateExperience({ index: idx, experience: { ...exp, start_date: e.target.value } }))
+                              }
+                              placeholder="Start date"
+                              className="min-w-0 rounded-md border border-border/50 bg-background/60 px-2 py-1 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                            />
+                            <input
+                              value={exp.end_date || ""}
+                              onChange={(e) =>
+                                dispatch(updateExperience({ index: idx, experience: { ...exp, end_date: e.target.value } }))
+                              }
+                              placeholder="End date"
+                              className="min-w-0 rounded-md border border-border/50 bg-background/60 px-2 py-1 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                            />
+                            <input
+                              value={exp.location || ""}
+                              onChange={(e) =>
+                                dispatch(updateExperience({ index: idx, experience: { ...exp, location: e.target.value } }))
+                              }
+                              placeholder="Location"
+                              className="min-w-0 rounded-md border border-border/50 bg-background/60 px-2 py-1 text-sm outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
+                            />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all duration-300">
+                        <div className="flex flex-wrap items-center gap-2 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-all duration-300">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => dispatch(removeExperience({ index: idx }))}
+                            className="rounded-full border-border/60 hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive shadow-sm h-8 px-3"
+                            aria-label="Remove experience"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -734,6 +880,14 @@ export function TailorView() {
                       </div>
                     </div>
                   ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dispatch(addExperience())}
+                    className="w-full rounded-xl border-dashed border-border/70 text-muted-foreground hover:border-primary/50 hover:text-primary"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add experience
+                  </Button>
                 </div>
               </div>
             </div>
