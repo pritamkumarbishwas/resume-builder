@@ -1,7 +1,7 @@
 from app.services.llm_client import llm
 from app.schemas.resume import Resume
+from pydantic import ValidationError
 import logging
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -68,12 +68,30 @@ async def parse_resume_text(raw_text: str) -> Resume:
         logger.error(f"Failed to parse resume with LLM: {e}")
         raise ValueError(f"Could not parse resume text into standard format: {str(e)}")
 
+    # Attempt 1: use Pydantic's model_validate which handles minor type coercions
+    # (e.g. a string where a list is expected) without silently dropping fields.
     try:
-        return Resume(**json_response)
-    except Exception as e:
-        if isinstance(json_response, dict) and "projects" in json_response:
-            logger.warning(f"Retrying resume parse without projects: {e}")
-            json_response.pop("projects", None)
-            return Resume(**json_response)
-        logger.error(f"Failed to parse resume with LLM: {e}")
-        raise ValueError(f"Could not parse resume text into standard format: {str(e)}")
+        return Resume.model_validate(json_response)
+    except ValidationError as validation_err:
+        # Attempt 2: send the precise Pydantic validation error back to the LLM
+        # so it can self-correct any field — not just 'projects'.
+        logger.warning(
+            "Resume schema validation failed on first attempt; requesting LLM repair. "
+            "Errors: %s",
+            validation_err.error_count(),
+        )
+        repair_hint = (
+            f"The JSON you returned did not match the required schema.\n"
+            f"Pydantic reported {validation_err.error_count()} error(s):\n"
+            f"{validation_err}\n\n"
+            "Please return a corrected JSON object that fixes every listed error. "
+            "Do not drop fields — fix their values or set them to null/[] instead."
+        )
+        try:
+            repaired = await llm.generate_json(system_prompt, repair_hint)
+            return Resume.model_validate(repaired)
+        except Exception as e2:
+            logger.error("LLM repair attempt also failed: %s", e2)
+            raise ValueError(
+                f"Could not parse resume text into standard format: {str(e2)}"
+            ) from e2

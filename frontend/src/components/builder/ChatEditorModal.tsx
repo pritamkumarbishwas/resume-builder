@@ -37,6 +37,8 @@ export function ChatEditorModal({ isOpen, onClose, resume, jobDescription }: Cha
 
   if (!isOpen) return null
 
+  const MAX_HISTORY = 20 // prevent token-limit failures on very long sessions
+
   const handleSend = async () => {
     if (!input.trim()) return
     const userMsg = input
@@ -47,7 +49,9 @@ export function ChatEditorModal({ isOpen, onClose, resume, jobDescription }: Cha
       const res = await chatEdit({ 
         resume, 
         job_description: jobDescription, 
-        messages, 
+        // Send only the most recent messages to stay within LLM token limits.
+        // The server always has the full resume as ground truth so context loss is minimal.
+        messages: messages.slice(-MAX_HISTORY), 
         user_message: userMsg,
         template,
       }).unwrap()

@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Literal
 from app.schemas.resume import Resume
+import uuid
 
 
 # ── Existing schemas ────────────────────────────────────────────────────────
@@ -162,11 +163,21 @@ class ResumeVersion(BaseModel):
     ats_score: Optional[int] = None
 
 class SaveVersionRequest(BaseModel):
-    session_id: str
+    # If the client does not supply a session_id the server mints a fresh UUID,
+    # preventing state pollution from empty/null ids while keeping the API
+    # backward-compatible for clients that already manage their own session token.
+    session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     label: str
     resume: Resume
     job_description: Optional[str] = None
     ats_score: Optional[int] = None
+
+    @field_validator("label")
+    @classmethod
+    def label_length(cls, v: str) -> str:
+        if len(v) > 120:
+            raise ValueError("label must be 120 characters or fewer")
+        return v
 
 
 # ── Phase 2: Orchestrator Pipeline ───────────────────────────────────────────

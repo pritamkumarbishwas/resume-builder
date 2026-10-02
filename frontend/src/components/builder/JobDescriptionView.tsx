@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useAppDispatch } from "@/store/hooks"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { setJobDescription, setStep } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,7 +9,9 @@ const STEPS = ["Upload Profile", "Set Target Role", "Optimize & Export"]
 
 export function JobDescriptionView() {
   const dispatch = useAppDispatch()
-  const [jd, setJd] = useState("")
+  // Seed from Redux so navigating back doesn't wipe previously typed text
+  const savedJd = useAppSelector((state) => state.resume.jobDescription)
+  const [jd, setJd] = useState(savedJd)
 
   const handleNext = () => {
     if (!jd.trim()) return

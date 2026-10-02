@@ -1,5 +1,6 @@
 import { Provider } from "react-redux"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { ToastProvider } from "@/components/ui/toast"
 import { store } from "@/store"
 import type { ReactNode } from "react"
 import { Component } from "react"
@@ -54,7 +55,9 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <Provider store={store}>
       <TooltipProvider delayDuration={300}>
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <ToastProvider>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </ToastProvider>
       </TooltipProvider>
     </Provider>
   )

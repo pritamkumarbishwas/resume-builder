@@ -21,6 +21,9 @@ import {
 } from "@/store/slices/resume-slice"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SaveVersionDialog } from "@/components/ui/save-version-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useToast } from "@/components/ui/toast"
 import { Sparkles, Download, Briefcase, Copy, Check, FileText, History, Save, Layers, X, Plus, FolderGit2, GraduationCap, Trash2, User, MessageSquare, AlertTriangle } from "lucide-react"
 import { ATSScorePanel } from "./ATSScorePanel"
 import { ScoreBreakdownCard } from "./ScoreBreakdownCard"
@@ -157,6 +160,8 @@ export function TailorView() {
   const [generateSummary, { isLoading: isGenerating }] = useGenerateSummaryMutation()
   const [runPipeline, { isLoading: isScoring }] = useRunPipelineMutation()
 
+  const { toast } = useToast()
+
   const [activeExpIndex, setActiveExpIndex] = useState<number | null>(null)
   const [copiedExpIndex, setCopiedExpIndex] = useState<number | null>(null)
   const [atsData, setAtsData] = useState<any>(null)
@@ -167,11 +172,13 @@ export function TailorView() {
   const [showChatEditor, setShowChatEditor] = useState(false)
   const [showInterview, setShowInterview] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [isSavingVersion, setIsSavingVersion] = useState(false)
+  const [confirmLoad, setConfirmLoad] = useState<any>(null)  // holds the version to load
   const [skillEdit, setSkillEdit] = useState<SkillEdit | null>(null)
   const [skillDraft, setSkillDraft] = useState("")
   const [activeSection, setActiveSection] = useState<SectionId>("summary")
 
-  // Dummy session ID for now
   const sessionId = getSessionId()
 
   const [saveVersion] = useSaveVersionMutation()
@@ -433,6 +440,19 @@ export function TailorView() {
     }
   }
 
+  /** Trigger a file download without leaking DOM nodes. */
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    // Append → click → remove synchronously so the anchor never lives beyond this frame
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const handleExport = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/export/pdf?template=${encodeURIComponent(template)}`, {
@@ -441,18 +461,10 @@ export function TailorView() {
         body: JSON.stringify(resume),
       })
       if (!res.ok) throw new Error("Export failed")
-
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "Tailored_Resume.pdf"
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
+      triggerDownload(await res.blob(), "Tailored_Resume.pdf")
     } catch (err) {
       console.error(err)
-      alert("Failed to export PDF.")
+      toast("Failed to export PDF. Please try again.", "error")
     }
   }
 
@@ -464,26 +476,16 @@ export function TailorView() {
         body: JSON.stringify(resume),
       })
       if (!res.ok) throw new Error("Export failed")
-
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "Tailored_Resume.docx"
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
+      triggerDownload(await res.blob(), "Tailored_Resume.docx")
     } catch (err) {
       console.error(err)
-      alert("Failed to export DOCX.")
+      toast("Failed to export DOCX. Please try again.", "error")
     }
   }
 
-  const handleSaveVersion = async () => {
+  const handleSaveVersion = async (label: string) => {
+    setIsSavingVersion(true)
     try {
-      const label = prompt("Enter a label for this version (e.g. 'Tailored for Google'):")
-      if (!label) return
-
       await saveVersion({
         session_id: sessionId,
         label,
@@ -491,21 +493,31 @@ export function TailorView() {
         job_description: jobDescription,
         ats_score: atsData?.score || 0
       }).unwrap()
-      alert("Version saved successfully!")
+      toast("Version saved successfully!", "success")
+      setShowSaveDialog(false)
       refetchVersions()
     } catch (err) {
       console.error(err)
-      alert("Failed to save version.")
+      toast("Failed to save version. Please try again.", "error")
+    } finally {
+      setIsSavingVersion(false)
     }
   }
 
+  // Open a confirm dialog instead of using window.confirm()
   const handleLoadVersion = (version: any) => {
-    if (confirm("Are you sure you want to load this version? Any unsaved changes will be lost.")) {
-      dispatch(setResume(version.resume))
-      if (version.job_description) {
-        dispatch(setJobDescription(version.job_description))
-      }
+    setConfirmLoad(version)
+  }
+
+  const doLoadVersion = () => {
+    if (!confirmLoad) return
+    dispatch(setResume(confirmLoad.resume))
+    if (confirmLoad.job_description) {
+      dispatch(setJobDescription(confirmLoad.job_description))
     }
+    setConfirmLoad(null)
+    setShowHistory(false)
+    toast("Version restored.", "success")
   }
 
   return (
@@ -535,7 +547,7 @@ export function TailorView() {
           <Button
             size="sm"
             variant="outline"
-            onClick={handleSaveVersion}
+            onClick={() => setShowSaveDialog(true)}
             className="rounded-full border-border/70 px-3.5 text-foreground/80 hover:bg-muted/60"
           >
             <Save className="mr-1.5 h-3.5 w-3.5" />
@@ -1168,7 +1180,25 @@ export function TailorView() {
           </div>
         </div>
 
-        {/* Version history — overlay drawer */}
+        {/* Save version dialog */}
+      <SaveVersionDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        onSave={handleSaveVersion}
+        isSaving={isSavingVersion}
+      />
+
+      {/* Load version confirm dialog */}
+      <ConfirmDialog
+        isOpen={!!confirmLoad}
+        title="Restore version"
+        description="Any unsaved changes to the current resume will be lost. Are you sure you want to restore this version?"
+        confirmLabel="Restore"
+        onConfirm={doLoadVersion}
+        onCancel={() => setConfirmLoad(null)}
+      />
+
+      {/* Version history — overlay drawer */}
         {showHistory && (
           <>
             <div

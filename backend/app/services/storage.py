@@ -1,7 +1,7 @@
 from app.db.database import get_db
 from app.schemas.analysis import ResumeVersion
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ async def save_version(session_id: str, label: str, resume: dict, job_descriptio
         "version_id": version_id,
         "session_id": session_id,
         "label": label,
-        "created_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "resume": resume,
         "job_description": job_description,
         "ats_score": ats_score
@@ -24,10 +24,11 @@ async def save_version(session_id: str, label: str, resume: dict, job_descriptio
         del version_doc["_id"]
     return ResumeVersion(**version_doc)
 
-async def get_versions(session_id: str) -> list[ResumeVersion]:
+async def get_versions(session_id: str, limit: int = 50) -> list[ResumeVersion]:
     db = await get_db()
+    limit = min(max(1, limit), 50)  # enforce server-side cap regardless of caller
     cursor = db.resume_versions.find({"session_id": session_id}).sort("created_at", -1)
-    versions = await cursor.to_list(length=100)
+    versions = await cursor.to_list(length=limit)
     for v in versions:
         if "_id" in v:
             del v["_id"]

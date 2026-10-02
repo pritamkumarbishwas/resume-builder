@@ -43,9 +43,11 @@ async def save_resume_version(req: SaveVersionRequest):
         raise internal_error(e)
 
 @router.get("/versions/{session_id}")
-async def list_resume_versions(session_id: str):
+async def list_resume_versions(session_id: str, limit: int = 50):
+    """Return saved versions for a session, newest first. Max 50 per request."""
+    limit = min(max(1, limit), 50)  # clamp: never below 1 or above 50
     try:
-        return await get_versions(session_id)
+        return await get_versions(session_id, limit=limit)
     except Exception as e:
         raise internal_error(e)
 
