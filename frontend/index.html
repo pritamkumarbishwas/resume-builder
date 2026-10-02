@@ -10,7 +10,7 @@
     <script>
       ;(function () {
         var stored = localStorage.getItem("theme")
-        var theme = stored === "dark" || stored === "light" ? stored : "light"
+        var theme = stored === "dark" || stored === "light" ? stored : "dark"
         document.documentElement.classList.add(theme)
       })()
     </script>

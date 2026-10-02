@@ -3,10 +3,10 @@ import { useState, useEffect, useCallback } from "react"
 type Theme = "light" | "dark"
 
 function getTheme(): Theme {
-  if (typeof window === "undefined") return "light"
+  if (typeof window === "undefined") return "dark"
   const stored = localStorage.getItem("theme") as Theme | null
   if (stored === "light" || stored === "dark") return stored
-  return "light"
+  return "dark"
 }
 
 function applyTheme(theme: Theme) {
