@@ -9,4 +9,3 @@ PyMuPDF
 python-docx
 jinja2
 xhtml2pdf
-streamlit

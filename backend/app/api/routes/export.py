@@ -10,6 +10,7 @@ from docx.oxml import OxmlElement
 from docx.shared import Pt, Inches, RGBColor
 import io
 import os
+from app.utils.http_errors import internal_error
 
 router = APIRouter()
 
@@ -23,15 +24,15 @@ def sanitize_text(data):
         return [sanitize_text(i) for i in data]
     elif isinstance(data, str):
         # Replace common unicode characters that xhtml2pdf's default fonts can't render
-        return (data.replace('–', '-')
-                    .replace('—', '-')
-                    .replace('•', '')
-                    .replace('’', "'")
-                    .replace('‘', "'")
-                    .replace('“', '"')
-                    .replace('”', '"')
+        return (data.replace('â€“', '-')
+                    .replace('â€”', '-')
+                    .replace('â€¢', '')
+                    .replace('â€™', "'")
+                    .replace('â€˜', "'")
+                    .replace('â€œ', '"')
+                    .replace('â€', '"')
                     .replace('\u200b', '')
-                    .replace('…', '...'))
+                    .replace('â€¦', '...'))
     return data
 
 @router.get("/templates")
@@ -60,7 +61,7 @@ async def export_pdf(resume: Resume, template: str = "classic"):
 
         return Response(content=result_file.getvalue(), media_type="application/pdf")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 
 def _section_heading(doc, title: str, style):
@@ -246,4 +247,4 @@ async def export_docx(resume: Resume, template: str = "classic"):
             headers={"Content-Disposition": 'attachment; filename="Tailored_Resume.docx"'},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)

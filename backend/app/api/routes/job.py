@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.job import JobDescription
 from app.db.database import get_db
 import logging
+from app.utils.http_errors import internal_error
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,4 +15,4 @@ async def submit_job_description(jd: JobDescription):
         return jd
     except Exception as e:
         logger.error(f"Error saving job description: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)

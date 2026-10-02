@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.analysis import BulletRewriteRequest, SummaryRewriteRequest, CoverLetterRequest, ChatEditRequest
 from app.agents.writer_agent import rewrite_bullets, generate_summary, generate_cover_letter
 from app.agents.clarifier import process_chat_edit
+from app.utils.http_errors import internal_error
 
 router = APIRouter()
 
@@ -11,7 +12,7 @@ async def rewrite_resume_bullets(req: BulletRewriteRequest):
         new_bullets = await rewrite_bullets(req.original_bullets, req.job_description, req.template)
         return {"rewritten_bullets": new_bullets}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/generate-summary")
 async def generate_resume_summary(req: SummaryRewriteRequest):
@@ -19,7 +20,7 @@ async def generate_resume_summary(req: SummaryRewriteRequest):
         summary = await generate_summary(req.resume_text, req.job_description, req.template)
         return {"summary": summary}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/cover-letter")
 async def generate_cover_letter_route(req: CoverLetterRequest):
@@ -29,12 +30,12 @@ async def generate_cover_letter_route(req: CoverLetterRequest):
         cover_letter = await generate_cover_letter(resume_text, req.job_description, req.template)
         return {"cover_letter": cover_letter}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/chat-edit")
 async def handle_chat_edit(req: ChatEditRequest):
     try:
         return await process_chat_edit(req.resume, req.job_description, req.messages, req.user_message, req.template)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 

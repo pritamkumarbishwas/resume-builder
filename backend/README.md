@@ -1,13 +1,15 @@
 # Resume Builder AI Agent
 
-A FastAPI-based backend for an AI-powered resume builder.
+FastAPI backend for an AI-powered resume builder. The React frontend lives in `../frontend`.
 
 ## Architecture
 
-- **FastAPI**: Main web framework
-- **Pydantic**: Data validation and models
-- **Anthropic Claude API**: LLM provider for the agent steps
-- **Streamlit**: Frontend UI
+- **FastAPI + Pydantic**: API and the Resume JSON schema (the source of truth)
+- **Groq / OpenAI LLM**: agent steps — parse, write, match, score, review, interview
+- **MongoDB (Motor)**: parsed resumes and version history
+- **Jinja2 + xhtml2pdf**: PDF export (classic / modern / minimal templates)
+- **python-docx**: ATS-friendly single-column DOCX export (format-matched to the PDFs)
+- **Frontend**: React 19 + Vite + Redux Toolkit + Tailwind (`../frontend`)
 
 ## Getting Started
 
@@ -28,8 +30,43 @@ A FastAPI-based backend for an AI-powered resume builder.
    ```bash
    cp .env.example .env
    ```
+   Required: `GROQ_API_KEY`. Optional: `MONGO_URI` (defaults to local
+   `mongodb://localhost:27017`), `CORS_ORIGINS` (JSON array), `LLM_PROVIDER`,
+   `OPENAI_API_KEY` / `OPENAI_MODEL`.
 
 4. Run the API:
    ```bash
    uvicorn app.main:app --reload
    ```
+
+5. Run the frontend (separate terminal):
+   ```bash
+   cd ../frontend
+   npm install
+   npm run dev
+   ```
+
+## API overview
+
+| Group | Endpoints |
+|-------|-----------|
+| `/api/resume` | `POST /upload` (max 10 MB), `POST /versions/save`, `GET /versions/{session_id}`, `GET /versions/load/{version_id}` |
+| `/api/tailor` | `POST /rewrite-bullets`, `/generate-summary`, `/cover-letter`, `/chat-edit` |
+| `/api/analyze` | `POST /pipeline` (JD → matcher → ATS → gap → review), `/ats-score`, `/jd`, `/gap-report`, `/review` |
+| `/api/interview` | `POST /questions` |
+| `/api/export` | `GET /templates`, `POST /pdf`, `POST /docx` |
+| `/api/job` | `POST /submit` |
+
+## Tests
+
+```bash
+cd backend
+python tests/test_template_parity.py        # PDF/DOCX content parity, all templates
+python tests/test_chat_edit_preserve.py     # chat-edit must not drop contact fields
+```
+
+## Security notes
+
+- Server errors return a generic message; details are logged server-side only
+- Uploads are capped at 10 MB, request bodies at 20 MB (413)
+- MongoDB host and CORS origins come from environment variables, never code

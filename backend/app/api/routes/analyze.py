@@ -13,6 +13,7 @@ from app.agents.jd_analyzer import analyze_jd
 from app.agents.matcher import analyze_gaps
 from app.agents.reviewer_agent import review_resume
 from app.agents.orchestrator import run_pipeline
+from app.utils.http_errors import internal_error
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ async def run_analysis_pipeline(req: PipelineRequest):
     try:
         return await run_pipeline(req.resume, req.job_description)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/ats-score", response_model=ATSScoreResponse)
 async def get_ats_score(req: ATSScoreRequest):
@@ -30,14 +31,14 @@ async def get_ats_score(req: ATSScoreRequest):
         score_data = await score_resume(req.resume, req.job_description)
         return score_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/jd")
 async def extract_jd(req: JDAnalyzeRequest):
     try:
         return await analyze_jd(req.job_description)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/gap-report")
 async def generate_gap_report(req: GapReportRequest):
@@ -46,11 +47,11 @@ async def generate_gap_report(req: GapReportRequest):
         gaps = await analyze_gaps(req.resume, jd_data)
         return gaps
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)
 
 @router.post("/review")
 async def generate_review(req: ReviewRequest):
     try:
         return await review_resume(req.resume, req.job_description)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(e)

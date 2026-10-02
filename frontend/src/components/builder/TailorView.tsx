@@ -36,6 +36,7 @@ import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea"
 import { useSaveVersionMutation, useGetVersionsQuery, useGetTemplatesQuery } from "@/store/api/resume-api"
 import { containsToken, includesTerm, normalizeMatchText } from "@/lib/utils"
 import { computeScoreBreakdown } from "@/lib/score-breakdown"
+import { getSessionId } from "@/lib/session"
 import { setResume, setJobDescription, setTemplate } from "@/store/slices/resume-slice"
 import { TemplatePicker } from "./TemplatePicker"
 
@@ -170,7 +171,7 @@ export function TailorView() {
   const [activeSection, setActiveSection] = useState<SectionId>("summary")
 
   // Dummy session ID for now
-  const sessionId = "session-123"
+  const sessionId = getSessionId()
 
   const [saveVersion] = useSaveVersionMutation()
   const { data: versions, refetch: refetchVersions } = useGetVersionsQuery(sessionId)
