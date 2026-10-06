@@ -92,7 +92,7 @@ class BulletFeedback(BaseModel):
     original: str
     issue: str
     suggestion: str
-    severity: Literal["high", "medium", "low"]
+    severity: Literal["high", "medium", "low", "none"]
 
 class QualityCheck(BaseModel):
     """One grammar / tone / length verdict for a piece of resume text."""
